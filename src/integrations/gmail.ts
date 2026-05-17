@@ -50,10 +50,14 @@ async function listThreads(q: string, token: string, maxResults: number) {
     headers: { authorization: `Bearer ${token}` },
   });
   if (!res.ok) return { resultSizeEstimate: 0, threads: [] as Array<{ id: string }> };
-  return res.json() as Promise<{
-    resultSizeEstimate: number;
-    threads: Array<{ id: string }>;
-  }>;
+  const data = (await res.json()) as {
+    resultSizeEstimate?: number;
+    threads?: Array<{ id: string }>;
+  };
+  return {
+    resultSizeEstimate: data.resultSizeEstimate ?? 0,
+    threads: data.threads ?? [],
+  };
 }
 
 async function getThread(threadId: string, token: string) {
