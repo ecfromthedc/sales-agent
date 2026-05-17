@@ -137,9 +137,81 @@ async function appendBriefBlocks(pageId: string, brief: string, env: Env): Promi
   });
 }
 
-export async function getDealById(_dealId: string, _env: Env): Promise<Deal | null> {
-  // TODO: hydrate full Deal shape from a Notion page get + transcript fetch.
-  return null;
+export async function getDealById(dealId: string, env: Env): Promise<Deal | null> {
+  // Fetch the Deals page — returns null on 404, throws on other errors.
+  let page: any;
+  try {
+    page = await notionFetch(env, "GET", `/pages/${dealId}`);
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes("notion_404_")) return null;
+    throw err;
+  }
+
+  const props = page.properties as Record<string, any>;
+
+  const inviteeEmail: string = props["Invitee Email"]?.email ?? "";
+  const inviteeName: string = props["Invitee Name"]?.rich_text?.[0]?.plain_text ?? "";
+  const eventStartsAt: string = props["Event Starts At"]?.date?.start ?? "";
+  const eventUri: string = props["Event URI"]?.url ?? "";
+  const status: Deal["status"] = (props["Status"]?.select?.name ?? "Booked") as Deal["status"];
+
+  // Transcripts DB: query for rows whose Deal relation points to this page.
+  let transcript: string | undefined;
+  let startedAt: string | undefined;
+  let endedAt: string | undefined;
+
+  try {
+    const transcriptQuery = await notionFetch(
+      env,
+      "POST",
+      `/databases/${env.NOTION_TRANSCRIPTS_DB_ID}/query`,
+      {
+        filter: { property: "Deal", relation: { contains: dealId } },
+        sorts: [{ property: "Started At", direction: "descending" }],
+        page_size: 1,
+      },
+    );
+
+    const transcriptPage = transcriptQuery.results?.[0];
+    if (transcriptPage) {
+      const tProps = transcriptPage.properties as Record<string, any>;
+      startedAt = tProps["Started At"]?.date?.start ?? undefined;
+      endedAt = tProps["Started At"]?.date?.end ?? undefined;
+
+      // Transcript body lives in the page's child blocks (written by saveTranscript).
+      const blocks = await notionFetch(
+        env,
+        "GET",
+        `/blocks/${transcriptPage.id}/children?page_size=100`,
+      );
+
+      const paragraphTexts: string[] = [];
+      for (const block of blocks.results ?? []) {
+        if (block.type === "paragraph") {
+          const text: string = (block.paragraph?.rich_text ?? [])
+            .map((rt: any) => rt.plain_text ?? "")
+            .join("");
+          if (text) paragraphTexts.push(text);
+        }
+      }
+      if (paragraphTexts.length > 0) transcript = paragraphTexts.join("\n\n");
+    }
+  } catch {
+    // Transcript lookup is best-effort — a missing transcript is not fatal.
+  }
+
+  return {
+    id: dealId,
+    inviteeEmail,
+    inviteeName,
+    eventStartsAt,
+    eventUri,
+    questionsAndAnswers: [],
+    status,
+    startedAt,
+    endedAt,
+    transcript,
+  };
 }
 
 export async function resolveDealForMeeting(
