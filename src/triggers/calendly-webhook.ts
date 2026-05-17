@@ -20,7 +20,12 @@ export async function handleCalendlyWebhook(
   const rawBody = await req.text();
   const signature = req.headers.get("calendly-webhook-signature") ?? "";
 
-  if (!(await verifyCalendlySignature(rawBody, signature, env.CALENDLY_WEBHOOK_SIGNING_KEY))) {
+  if (!env.CALENDLY_WEBHOOK_SIGNING_KEY) {
+    console.warn(
+      "[calendly-webhook] CALENDLY_WEBHOOK_SIGNING_KEY is not set — " +
+        "skipping signature verification. Set the secret before deploying to production.",
+    );
+  } else if (!(await verifyCalendlySignature(rawBody, signature, env.CALENDLY_WEBHOOK_SIGNING_KEY))) {
     return new Response(JSON.stringify({ error: "invalid_signature" }), { status: 401 });
   }
 
