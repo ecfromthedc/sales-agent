@@ -83,12 +83,14 @@ Output a single-page brief in plain prose with these sections, no preamble:
 1. Who they are (one paragraph — artist, label/management if known, what they make, current trajectory)
 2. Past RT touchpoints (Gmail, Tides Tracker, Notion CRM evidence — quote dates and subjects if any; if none, say "cold lead, no prior touchpoint")
 3. Spotify snapshot (followers, popularity, top tracks, recent releases, related-artist tier)
-4. Suggested angle (one paragraph, written in Eric's voice — direct, music-industry-specific, no generic marketing speak)
-5. Three questions Eric should ask on the call
+4. Comparable RT clients (look at past campaigns in the enrichment data — find clients with similar genre, audience size, goals, or release timeline. Name 1-3 past clients whose results Eric can reference as proof points on the call. If no past campaigns match, say "no close comparables in campaign history.")
+5. Suggested angle (one paragraph, written in Eric's voice — direct, music-industry-specific, no generic marketing speak. Weave in the comparable client results if available.)
+6. Three questions Eric should ask on the call
 
 Hard rules:
 - Never invent metrics. If Spotify enrichment is missing, say so.
 - Never invent past touchpoints. If Gmail returned zero threads, say "cold."
+- Never invent case studies or client names. Only reference clients present in the pastCampaigns enrichment data.
 - Match Eric's tone: concise, founder-direct, no fluff.
 `;
 
