@@ -15,6 +15,7 @@ export interface Env {
   GMAIL_OAUTH_CLIENT_ID: string;
   GMAIL_OAUTH_CLIENT_SECRET: string;
   TIDES_TRACKER_API_KEY: string;
+  TEST_AUTH_KEY: string;
 
   // Vars — runtime config
   NOTION_DEALS_DB_ID: string;

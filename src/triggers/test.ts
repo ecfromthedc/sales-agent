@@ -4,7 +4,7 @@
  *
  * Usage:
  *   curl -X POST https://<worker>/test/pre-call \
- *     -H "X-Test-Key: rt-test-2026" \
+ *     -H "X-Test-Key: <TEST_AUTH_KEY secret value>" \
  *     -H "Content-Type: application/json" \
  *     --data '{
  *       "email": "test@example.com",
@@ -16,14 +16,12 @@
 import type { Env } from "../lib/env";
 import { runPreCallBrief } from "../agents/pre-call-brief";
 
-const TEST_KEY = "rt-test-2026";
-
 export async function handleTestPreCall(
   req: Request,
   env: Env,
   ctx: ExecutionContext,
 ): Promise<Response> {
-  if (req.headers.get("X-Test-Key") !== TEST_KEY) {
+  if (req.headers.get("X-Test-Key") !== env.TEST_AUTH_KEY) {
     return json({ error: "forbidden" }, 403);
   }
 
