@@ -4,7 +4,7 @@ Safe secrets emitter. Reads .dev.vars and prints shell-quoted `export` lines.
 Never echoes raw values to stderr or terminal.
 
 Usage in zsh/bash:
-    eval "$(python3 ~/Projects/active/rt-sales-call-agent/scripts/load_secrets.py)"
+    eval "$(python3 ~/Documents/Development/sales-agent/scripts/load_secrets.py)"
 
 Skips malformed lines silently. Won't let bash interpret values as commands.
 """
@@ -14,7 +14,7 @@ import shlex
 import sys
 from pathlib import Path
 
-repo = Path(os.environ.get("RT_AGENT_REPO", Path.home() / "Projects/active/rt-sales-call-agent"))
+repo = Path(os.environ.get("RT_AGENT_REPO", Path.home() / "Documents/Development/sales-agent"))
 path = repo / ".dev.vars"
 
 if not path.exists():

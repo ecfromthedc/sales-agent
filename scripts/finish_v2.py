@@ -11,7 +11,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO = Path(os.environ.get("RT_AGENT_REPO", Path.home() / "Projects/active/rt-sales-call-agent"))
+REPO = Path(os.environ.get("RT_AGENT_REPO", Path.home() / "Documents/Development/sales-agent"))
 DEVVARS = REPO / ".dev.vars"
 WRANGLER_TOML = REPO / "wrangler.toml"
 

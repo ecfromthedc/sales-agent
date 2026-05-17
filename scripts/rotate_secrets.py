@@ -10,7 +10,7 @@ For each leaked or stale secret:
   5. Optional: deletes the old key at the provider via API if supported
 
 Run anytime:
-    python3 ~/Projects/active/rt-sales-call-agent/scripts/rotate_secrets.py
+    python3 ~/Documents/Development/sales-agent/scripts/rotate_secrets.py
 
 Skip any item by pressing Enter at the prompt.
 """
@@ -24,7 +24,7 @@ import webbrowser
 from datetime import datetime
 from pathlib import Path
 
-REPO = Path(os.environ.get("RT_AGENT_REPO", Path.home() / "Projects/active/rt-sales-call-agent"))
+REPO = Path(os.environ.get("RT_AGENT_REPO", Path.home() / "Documents/Development/sales-agent"))
 DEVVARS = REPO / ".dev.vars"
 WRANGLER = REPO / "node_modules/.bin/wrangler"
 ROTATION_LOG = REPO / ".rotation-log"   # plaintext audit, gitignored, never holds values

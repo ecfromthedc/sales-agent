@@ -21,7 +21,7 @@ import re
 import shutil
 from pathlib import Path
 
-PATH = Path.home() / "Projects/active/rt-sales-call-agent/.dev.vars"
+PATH = Path.home() / "Documents/Development/sales-agent/.dev.vars"
 BACKUP = PATH.with_suffix(".dev.vars.bak")
 
 RENAMES = {
