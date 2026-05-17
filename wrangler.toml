@@ -1,0 +1,39 @@
+name = "rt-sales-call-agent"
+main = "src/index.ts"
+compatibility_date = "2026-05-14"
+compatibility_flags = ["nodejs_compat"]
+account_id = "d5fbf64067844a591842c14f1b53bd79"
+
+# Cron — poll Drive for new Meet transcripts every 5 minutes
+[triggers]
+crons = ["*/5 * * * *"]
+
+# Runtime config (not secrets)
+[vars]
+NOTION_DEALS_DB_ID = "3611465b-b829-81de-a237-cf6516fe8fcf"
+NOTION_TRANSCRIPTS_DB_ID = "3611465b-b829-81a0-b6a0-cc55e6ed784c"
+NOTION_PITCH_ARTIFACTS_DB_ID = "3611465b-b829-8174-875c-c9a6db1540cd"
+MEET_RECORDINGS_FOLDER_ID = "19krQR2fbafw3h0uxLF7SvEoh2mgW0Sy8"        # set after Eric grabs the Drive folder ID
+RT_SLACK_NOTIFY_WEBHOOK = ""          # optional
+
+# Required secrets (set via `wrangler secret put`):
+#   ANTHROPIC_API_KEY
+#   NOTION_API_KEY
+#   CALENDLY_WEBHOOK_SIGNING_KEY     (populated after webhook subscription is created)
+#   CALENDLY_PERSONAL_ACCESS_TOKEN
+#   SPOTIFY_CLIENT_ID
+#   SPOTIFY_CLIENT_SECRET
+#   GMAIL_OAUTH_REFRESH_TOKEN        (gmail.readonly + drive.readonly scopes)
+#   GMAIL_OAUTH_CLIENT_ID
+#   GMAIL_OAUTH_CLIENT_SECRET
+#   TIDES_TRACKER_API_KEY            (optional)
+
+# R2 bucket for pitch PDFs
+[[r2_buckets]]
+binding = "PITCH_PDFS"
+bucket_name = "rt-sales-pitch-pdfs"
+
+# KV for cron cursor + short-lived state
+[[kv_namespaces]]
+binding = "STATE"
+id = "926fd9f294ce495f89ba2f5fba2e41b2"
