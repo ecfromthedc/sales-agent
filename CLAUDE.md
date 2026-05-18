@@ -324,3 +324,26 @@ All carousel content maps to Rising Tides' value proposition:
 - **No emoji.** Gold star in mono strings is the only exception.
 - The **mark is never modified** — one color, one silhouette, every time.
 - **Voice > decoration.** Always.
+
+---
+
+## Working Previews (in this repo)
+
+Drafts kicking around for fine-tuning. Naming: `preview-{slug}.html` while in flight; rename to spec (`rt-carousel-[format]-[slug]-[date].html`) when copy/design is locked.
+
+| File | Vol | Format | Status | Notes |
+|---|---|---|---|---|
+| `preview-midnight-press.html` | 01 | Editorial + Value (5 slides) | shipped | Mon Rovia 30K → 1.8M case file. Inlined into RT Pocket as `panel-carousel-midnight-press`. |
+| `preview-carousel-ideas-index.html` | 00 | Index | draft | Master concept board — all volumes with hook/payoff/CTA/sources. Inlined as `panel-carousel-ideas`. |
+| `preview-pre-release-curiosity.html` | 02 | Value (4 slides) | draft | "Drop day isn't launch." Hook → Build → Payoff → CTA. Sources: Undertow curiosity-gap + Mon Rovia 6-wk arc + Spotify pre-save weighting. |
+| `preview-save-economy.html` | 03 | Value (4 slides) | draft | "Your likes are lying to you." Money slide = giant **24%** save:like ratio. Sources: TikTok 2024 ranking signals + IG Reels save weighting + RT portfolio top-quartile. |
+| `preview-creator-curiosity.html` | 04 | Value (4 slides) | draft | "Your brief is killing the campaign." A/B build slide (Scripted vs Native). Sources: RT campaign portfolio + Kingmaker brief-to-native SOP + failed `label-scripted-creator-reads` Q4 2025. |
+
+**Inline-the-stripped-version rule:** Pocket panels can't load `./brand/_brand.css` (srcdoc isolation). When inlining a preview into RT Pocket as a `<script type="text/html">` panel, strip the `_brand.css` `<link>` and substitute the logo SVG with a text mark — those two are the only diffs vs. the repo preview. Sources bar moves above/below freely.
+
+---
+
+## Change Log
+
+- **2026-05-18** — Added Vol. 02/03/04 working previews plus carousel-ideas index. All four inlined into RT Pocket as panels (`#carousel-ideas`, `#carousel-pre-release-curiosity`, `#carousel-save-economy`, `#carousel-creator-curiosity`) for phone-side fine-tuning. Pocket version `2026-05-18-005`.
+- **2026-05-18** (earlier) — Initial Midnight Press Vol. 01 (`preview-midnight-press.html`) shipped + inlined into RT Pocket.
