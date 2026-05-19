@@ -14,6 +14,7 @@
 
 import type { Env } from "../lib/env";
 import { enrichFromSpotify } from "../integrations/spotify";
+import { enrichFromSongstats } from "../integrations/songstats";
 import { searchGmailHistory } from "../integrations/gmail";
 import { upsertDeal, type DealUpsertInput } from "../integrations/notion";
 import { lookupPastCampaigns } from "../integrations/tides-tracker";
@@ -37,26 +38,35 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       .find((qa) => /spotify/i.test(qa.question))?.answer?.trim() ?? null;
     console.log("pre_call_brief_step", { step: "extract_spotify", hasLink: !!spotifyLink });
 
-    const [spotify, gmail, pastCampaigns] = await Promise.allSettled([
+    // Extract Spotify artist ID for Songstats lookup
+    const spotifyArtistId = spotifyLink
+      ? spotifyLink.match(/artist\/([a-zA-Z0-9]{22})/)?.[1] ?? null
+      : null;
+
+    const [spotify, songstats, gmail, pastCampaigns] = await Promise.allSettled([
       spotifyLink ? enrichFromSpotify(spotifyLink, env) : Promise.resolve(null),
+      spotifyArtistId ? enrichFromSongstats(spotifyArtistId, env) : Promise.resolve(null),
       searchGmailHistory(input.inviteeEmail, env),
       lookupPastCampaigns({ email: input.inviteeEmail, name: input.inviteeName }, env),
     ]);
     console.log("pre_call_brief_step", {
       step: "enrichment_done",
       spotify: spotify.status,
+      songstats: songstats.status,
       gmail: gmail.status,
       pastCampaigns: pastCampaigns.status,
       spotifyErr: spotify.status === "rejected" ? (spotify.reason as Error)?.message : undefined,
+      songstatsErr: songstats.status === "rejected" ? (songstats.reason as Error)?.message : undefined,
       gmailErr: gmail.status === "rejected" ? (gmail.reason as Error)?.message : undefined,
       trackerErr: pastCampaigns.status === "rejected" ? (pastCampaigns.reason as Error)?.message : undefined,
     });
 
     const enrichment = {
       spotify: spotify.status === "fulfilled" ? spotify.value : null,
+      songstats: songstats.status === "fulfilled" ? songstats.value : null,
       gmail: gmail.status === "fulfilled" ? gmail.value : null,
       pastCampaigns: pastCampaigns.status === "fulfilled" ? pastCampaigns.value : null,
-      failures: [spotify, gmail, pastCampaigns]
+      failures: [spotify, songstats, gmail, pastCampaigns]
         .filter((r) => r.status === "rejected")
         .map((r) => (r as PromiseRejectedResult).reason?.message ?? "unknown"),
     };

@@ -82,7 +82,16 @@ Output a single-page brief in plain prose with these sections, no preamble:
 
 1. Who they are (one paragraph — artist, label/management if known, what they make, current trajectory)
 2. Past RT touchpoints (Gmail, Tides Tracker, Notion CRM evidence — quote dates and subjects if any; if none, say "cold lead, no prior touchpoint")
-3. Spotify snapshot (followers, popularity, top tracks, recent releases, related-artist tier)
+3. Platform snapshot — use Songstats data (enrichment.songstats) as the PRIMARY source for stats. Include:
+   - Monthly listeners (songstats.spotify.monthlyListeners)
+   - Popularity score (songstats.spotify.popularity)
+   - Followers (songstats.spotify.followers)
+   - Total streams (songstats.spotify.streamsTotal)
+   - Playlist placements (songstats.spotify.playlistsCurrent, editorial count)
+   - Social following (songstats.social — Instagram, TikTok, YouTube if available)
+   - Genres (songstats.genres)
+   - Related artists (songstats.relatedArtists)
+   Fall back to enrichment.spotify only for release catalog (recentReleases, topTracks) since Spotify's public API still returns those.
 4. Comparable RT clients (look at past campaigns in the enrichment data — find clients with similar genre, audience size, goals, or release timeline. Name 1-3 past clients whose results Eric can reference as proof points on the call. If no past campaigns match, say "no close comparables in campaign history.")
 5. Suggested angle (one paragraph, written in Eric's voice — direct, music-industry-specific, no generic marketing speak. Weave in the comparable client results if available.)
 6. Three questions Eric should ask on the call
