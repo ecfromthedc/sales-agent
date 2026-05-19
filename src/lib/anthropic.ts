@@ -91,7 +91,8 @@ Output a single-page brief in plain prose with these sections, no preamble:
    - Social following (songstats.social — Instagram, TikTok, YouTube if available)
    - Genres (songstats.genres)
    - Related artists (songstats.relatedArtists)
-   Fall back to enrichment.spotify only for release catalog (recentReleases, topTracks) since Spotify's public API still returns those.
+   - **Top 3-5 tracks** (songstats.topTracks) — list each track name with total streams. Format streams as human-readable (e.g., "1.5B streams", "240M streams"). These are total all-time Spotify streams per track.
+   Fall back to enrichment.spotify only for release catalog (recentReleases) since Spotify's public API still returns those.
 4. Comparable RT clients (look at past campaigns in the enrichment data — find clients with similar genre, audience size, goals, or release timeline. Name 1-3 past clients whose results Eric can reference as proof points on the call. If no past campaigns match, say "no close comparables in campaign history.")
 5. Suggested angle (one paragraph, written in Eric's voice — direct, music-industry-specific, no generic marketing speak. Weave in the comparable client results if available.)
 6. Three questions Eric should ask on the call

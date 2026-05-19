@@ -31,6 +31,11 @@ export interface SongstatsEnrichment {
     playlistReachCurrent: number | null;
     chartsCurrent: number | null;
   };
+  topTracks: Array<{
+    name: string;
+    artist: string;
+    totalStreams: number;
+  }>;
   social: {
     instagramFollowers: number | null;
     tiktokFollowers: number | null;
@@ -55,14 +60,16 @@ export async function enrichFromSongstats(
     "Accept": "application/json",
   };
 
-  // Two parallel calls: stats (all platforms) + info (metadata/genres/links)
-  const [statsRes, infoRes] = await Promise.allSettled([
+  // Three parallel calls: stats + info + top tracks
+  const [statsRes, infoRes, topTracksRes] = await Promise.allSettled([
     fetchSongstats(`/artists/stats?spotify_artist_id=${spotifyArtistId}&source=spotify,tiktok,instagram,youtube`, headers),
     fetchSongstats(`/artists/info?spotify_artist_id=${spotifyArtistId}`, headers),
+    fetchSongstats(`/artists/top_tracks?spotify_artist_id=${spotifyArtistId}&source=spotify&metric=streams&scope=total`, headers),
   ]);
 
   const stats = statsRes.status === "fulfilled" ? statsRes.value : null;
   const info = infoRes.status === "fulfilled" ? infoRes.value : null;
+  const topTracksData = topTracksRes.status === "fulfilled" ? topTracksRes.value : null;
 
   if (!stats && !info) {
     console.warn("songstats_enrichment_failed: both calls failed", {
@@ -80,6 +87,14 @@ export async function enrichFromSongstats(
 
   const artistInfo = info?.artist_info ?? stats?.artist_info ?? {};
 
+  // Extract top tracks from nested response
+  const rawTopTracks = topTracksData?.data?.[0]?.top_tracks ?? [];
+  const topTracks = rawTopTracks.slice(0, 5).map((t: any) => ({
+    name: t.track_name ?? "Unknown",
+    artist: t.artist_name ?? artistInfo.name ?? "Unknown",
+    totalStreams: t.rank_value ?? 0,
+  }));
+
   return {
     name: artistInfo.name ?? "Unknown",
     country: artistInfo.country ?? undefined,
@@ -96,6 +111,7 @@ export async function enrichFromSongstats(
       playlistReachCurrent: spotifyStats?.playlist_reach_current ?? null,
       chartsCurrent: spotifyStats?.charts_current ?? null,
     },
+    topTracks,
     social: {
       instagramFollowers: igStats?.followers_total ?? null,
       tiktokFollowers: tiktokStats?.followers_total ?? null,
