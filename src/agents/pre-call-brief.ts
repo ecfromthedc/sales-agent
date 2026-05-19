@@ -16,8 +16,8 @@ import type { Env } from "../lib/env";
 import { enrichFromSpotify } from "../integrations/spotify";
 import { enrichFromSongstats } from "../integrations/songstats";
 import { searchGmailHistory } from "../integrations/gmail";
+import { lookupCRM } from "../integrations/crm-lookup";
 import { upsertDeal, type DealUpsertInput } from "../integrations/notion";
-import { lookupPastCampaigns } from "../integrations/tides-tracker";
 import { composeBrief } from "../lib/anthropic";
 
 interface PreCallBriefInput {
@@ -43,30 +43,48 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       ? spotifyLink.match(/artist\/([a-zA-Z0-9]{22})/)?.[1] ?? null
       : null;
 
-    const [spotify, songstats, gmail, pastCampaigns] = await Promise.allSettled([
+    // Phase 1: Songstats + Spotify + Gmail in parallel (Songstats is sequential internally)
+    const [spotify, songstats, gmail] = await Promise.allSettled([
       spotifyLink ? enrichFromSpotify(spotifyLink, env) : Promise.resolve(null),
       spotifyArtistId ? enrichFromSongstats(spotifyArtistId, env) : Promise.resolve(null),
       searchGmailHistory(input.inviteeEmail, env),
-      lookupPastCampaigns({ email: input.inviteeEmail, name: input.inviteeName }, env),
     ]);
+
+    // Phase 2: CRM lookup — uses artist name from Songstats if available, falls back to invitee name
+    const songstatsData = songstats.status === "fulfilled" ? songstats.value : null;
+    const artistName = songstatsData?.name ?? input.inviteeName;
+    const relatedArtists = songstatsData?.relatedArtists?.map((a) => a.name);
+
+    // Extract label from Songstats platform links or notes
+    const labelHint = input.questionsAndAnswers
+      .find((qa) => /label|distro/i.test(qa.question))?.answer?.trim();
+
+    const crmLookup = await lookupCRM({
+      artistName,
+      label: labelHint,
+      relatedArtists,
+    }, env).catch((e) => {
+      console.warn("crm_lookup_failed", (e as Error).message);
+      return { exactMatches: [], labelMatches: [], totalCampaignsFound: 0 };
+    });
+
     console.log("pre_call_brief_step", {
       step: "enrichment_done",
       spotify: spotify.status,
       songstats: songstats.status,
       gmail: gmail.status,
-      pastCampaigns: pastCampaigns.status,
+      crmMatches: crmLookup.totalCampaignsFound,
       spotifyErr: spotify.status === "rejected" ? (spotify.reason as Error)?.message : undefined,
       songstatsErr: songstats.status === "rejected" ? (songstats.reason as Error)?.message : undefined,
       gmailErr: gmail.status === "rejected" ? (gmail.reason as Error)?.message : undefined,
-      trackerErr: pastCampaigns.status === "rejected" ? (pastCampaigns.reason as Error)?.message : undefined,
     });
 
     const enrichment = {
       spotify: spotify.status === "fulfilled" ? spotify.value : null,
-      songstats: songstats.status === "fulfilled" ? songstats.value : null,
+      songstats: songstatsData,
       gmail: gmail.status === "fulfilled" ? gmail.value : null,
-      pastCampaigns: pastCampaigns.status === "fulfilled" ? pastCampaigns.value : null,
-      failures: [spotify, songstats, gmail, pastCampaigns]
+      crm: crmLookup,
+      failures: [spotify, songstats, gmail]
         .filter((r) => r.status === "rejected")
         .map((r) => (r as PromiseRejectedResult).reason?.message ?? "unknown"),
     };

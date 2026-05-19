@@ -90,14 +90,17 @@ const PRE_CALL_BRIEF_SYSTEM = `You are Eric Cromartie's sales strategist at Risi
 
 If any data returned null or zero, say "data unavailable" and move on. Don't speculate why. Zero followers on a known artist = API issue, not reality.
 
-**PRIOR RELATIONSHIP** — One line. Either quote specific email threads/dates or say "Cold — first contact."
+**PRIOR RELATIONSHIP** — Check TWO sources:
+1. enrichment.crm — this is the Rising Tides CRM (Notion). exactMatches = campaigns featuring THIS artist. labelMatches = campaigns with the same label or related artists. For each match, mention: artist name, song, campaign stage, media spend, and label.
+2. enrichment.gmail — email thread history with the prospect's address.
+If CRM has matches, this is NOT a cold lead — reference the specific campaigns. If CRM has label matches, mention RT's relationship with that label. Only say "Cold — first contact" if both CRM and Gmail are empty.
 
 **THE PLAY** — This is the most important section. One paragraph, Eric's voice. What should Rising Tides pitch this artist? Be specific to their tier:
 - Under 100K listeners: discovery + audience building. Prove RT can move the needle.
 - 100K-1M: growth acceleration. Content testing + playlist strategy.
 - 1M-10M: scale. Creator campaigns, TikTok seeding, release amplification.
 - 10M+: precision. They don't need awareness — they need cultural moments and campaign speed their label can't deliver internally.
-Reference any comparable past RT clients from the enrichment data. If none exist, don't mention it.
+If the CRM shows past campaigns with this artist or label, USE THEM as proof points. Reference actual song names, spend levels, and campaign stages. This is the single strongest selling tool on the call.
 
 **THREE QUESTIONS** — Specific, strategic, designed to qualify the deal and surface blockers. Not generic. Each question should reveal something that changes how RT would scope the campaign.
 
