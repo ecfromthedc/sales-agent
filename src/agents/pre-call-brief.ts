@@ -106,7 +106,7 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       enrichment,
     }, env);
 
-    // Slack notification (best-effort, don't block on failure)
+    // Post full brief to Slack (best-effort, don't block on failure)
     if (env.SLACK_BOT_TOKEN && env.SLACK_BRIEF_CHANNEL_ID) {
       try {
         const notionUrl = `https://www.notion.so/${pageId.replace(/-/g, "")}`;
@@ -115,6 +115,14 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
           weekday: "short", month: "short", day: "numeric",
           hour: "numeric", minute: "2-digit",
         });
+
+        // Convert markdown-ish brief to Slack mrkdwn
+        const slackBrief = brief
+          .replace(/\*\*([^*]+)\*\*/g, "*$1*")   // **bold** → *bold*
+          .replace(/^#{1,3}\s+/gm, "*")           // ### heading → *heading
+          .replace(/\|/g, "│")                     // table pipes → unicode
+          .slice(0, 2900);                         // Slack block limit
+
         await fetch("https://slack.com/api/chat.postMessage", {
           method: "POST",
           headers: {
@@ -123,7 +131,23 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
           },
           body: JSON.stringify({
             channel: env.SLACK_BRIEF_CHANNEL_ID,
-            text: `📋 Pre-call brief ready: *${input.inviteeName}* (${meetingTime})\n<${notionUrl}|View in Notion>`,
+            text: `📋 *${input.inviteeName}* — ${meetingTime}`,
+            blocks: [
+              {
+                type: "header",
+                text: { type: "plain_text", text: `📋 ${input.inviteeName} — ${meetingTime}` },
+              },
+              {
+                type: "section",
+                text: { type: "mrkdwn", text: slackBrief },
+              },
+              {
+                type: "context",
+                elements: [
+                  { type: "mrkdwn", text: `<${notionUrl}|Open in Notion> │ ${input.inviteeEmail}` },
+                ],
+              },
+            ],
           }),
         });
       } catch (slackErr) {
