@@ -66,7 +66,7 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
     console.log("pre_call_brief_step", { step: "compose_done", briefLen: brief.length });
 
     console.log("pre_call_brief_step", { step: "notion_upsert_start" });
-    await upsertDeal({
+    const pageId = await upsertDeal({
       dealId: input.dealId,
       inviteeEmail: input.inviteeEmail,
       inviteeName: input.inviteeName,
@@ -77,6 +77,31 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       brief,
       enrichment,
     }, env);
+
+    // Slack notification (best-effort, don't block on failure)
+    if (env.SLACK_BOT_TOKEN && env.SLACK_BRIEF_CHANNEL_ID) {
+      try {
+        const notionUrl = `https://www.notion.so/${pageId.replace(/-/g, "")}`;
+        const meetingTime = new Date(input.eventStartsAt).toLocaleString("en-US", {
+          timeZone: "America/New_York",
+          weekday: "short", month: "short", day: "numeric",
+          hour: "numeric", minute: "2-digit",
+        });
+        await fetch("https://slack.com/api/chat.postMessage", {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${env.SLACK_BOT_TOKEN}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            channel: env.SLACK_BRIEF_CHANNEL_ID,
+            text: `📋 Pre-call brief ready: *${input.inviteeName}* (${meetingTime})\n<${notionUrl}|View in Notion>`,
+          }),
+        });
+      } catch (slackErr) {
+        console.warn("slack_notify_failed", (slackErr as Error).message);
+      }
+    }
 
     console.log("pre_call_brief_complete", {
       invitee: input.inviteeEmail,

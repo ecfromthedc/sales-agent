@@ -22,7 +22,8 @@ export interface Env {
   NOTION_TRANSCRIPTS_DB_ID: string;
   NOTION_PITCH_ARTIFACTS_DB_ID: string;
   MEET_RECORDINGS_FOLDER_ID: string;
-  RT_SLACK_NOTIFY_WEBHOOK: string;
+  SLACK_BOT_TOKEN: string;
+  SLACK_BRIEF_CHANNEL_ID: string;
 
   // Bindings
   PITCH_PDFS: R2Bucket;
