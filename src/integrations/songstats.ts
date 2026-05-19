@@ -13,7 +13,7 @@
 
 import type { Env } from "../lib/env";
 
-const SONGSTATS_BASE = "https://songstats.p.rapidapi.com/enterprise/v1";
+const SONGSTATS_BASE = "https://songstats.p.rapidapi.com";
 
 export interface SongstatsEnrichment {
   name: string;
