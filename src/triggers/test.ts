@@ -53,22 +53,27 @@ export async function handleTestPreCall(
     });
   }
 
-  ctx.waitUntil(
-    runPreCallBrief({
+  try {
+    await runPreCallBrief({
       inviteeEmail: body.email,
       inviteeName: body.name,
       eventStartsAt: startTime,
       eventUri,
       questionsAndAnswers: qa,
-    }, env),
-  );
+    }, env);
 
-  return json({
-    ok: true,
-    queued: "pre-call-brief",
-    fakeEvent: { eventUri, startTime },
-    note: "Check Notion Deals db in ~30s for the result.",
-  });
+    return json({
+      ok: true,
+      completed: "pre-call-brief",
+      fakeEvent: { eventUri, startTime },
+    });
+  } catch (err) {
+    return json({
+      ok: false,
+      error: (err as Error).message,
+      fakeEvent: { eventUri, startTime },
+    }, 500);
+  }
 }
 
 interface TestInput {
