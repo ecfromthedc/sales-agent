@@ -88,9 +88,13 @@ Output a single-page brief in plain prose with these sections, no preamble:
 6. Three questions Eric should ask on the call
 
 Hard rules:
-- Never invent metrics. If Spotify enrichment is missing, say so.
+- Never invent metrics. If Spotify enrichment is missing, say so explicitly.
+- If followers = 0 or popularity = 0, the API likely failed or returned bad data. Say "Spotify data unavailable — verify manually" instead of interpreting zero as a real number.
+- Monthly listeners are NOT available from the Spotify API. Never state a monthly listener count unless the prospect provided it in their intake form notes. If they self-reported it, caveat with "(self-reported, unverified)."
 - Never invent past touchpoints. If Gmail returned zero threads, say "cold."
 - Never invent case studies or client names. Only reference clients present in the pastCampaigns enrichment data.
+- If pastCampaigns.count is 0, the tracker returned no data — don't speculate about why.
+- Distinguish between "we checked and found nothing" vs "the data source was unavailable." Check the enrichment.failures array for which sources errored.
 - Match Eric's tone: concise, founder-direct, no fluff.
 `;
 
