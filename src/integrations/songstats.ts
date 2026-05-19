@@ -104,7 +104,7 @@ export async function enrichFromSongstats(
   const artistInfo = info?.artist_info ?? stats?.artist_info ?? {};
 
   // Extract top tracks and fetch per-track popularity scores
-  const rawTopTracks = (topTracksData?.data?.[0]?.top_tracks ?? []).slice(0, 5);
+  const rawTopTracks = (topTracksData?.data?.[0]?.top_tracks ?? []).slice(0, 3);
   const topTracks: TrackStats[] = [];
 
   for (const t of rawTopTracks) {
