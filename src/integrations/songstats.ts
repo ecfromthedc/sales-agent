@@ -60,22 +60,30 @@ export async function enrichFromSongstats(
     "Accept": "application/json",
   };
 
-  // Three parallel calls: stats + info + top tracks
-  const [statsRes, infoRes, topTracksRes] = await Promise.allSettled([
-    fetchSongstats(`/artists/stats?spotify_artist_id=${spotifyArtistId}&source=spotify,tiktok,instagram,youtube`, headers),
-    fetchSongstats(`/artists/info?spotify_artist_id=${spotifyArtistId}`, headers),
-    fetchSongstats(`/artists/top_tracks?spotify_artist_id=${spotifyArtistId}&source=spotify&metric=streams&scope=total`, headers),
-  ]);
+  // Sequential calls — free tier rate limit is 1 req/sec
+  const delay = () => new Promise((r) => setTimeout(r, 1100));
 
-  const stats = statsRes.status === "fulfilled" ? statsRes.value : null;
-  const info = infoRes.status === "fulfilled" ? infoRes.value : null;
-  const topTracksData = topTracksRes.status === "fulfilled" ? topTracksRes.value : null;
+  const stats = await fetchSongstats(`/artists/stats?spotify_artist_id=${spotifyArtistId}&source=spotify,tiktok,instagram,youtube`, headers).catch((e) => {
+    console.warn("songstats_stats_failed", (e as Error).message);
+    return null;
+  });
+
+  await delay();
+
+  const info = await fetchSongstats(`/artists/info?spotify_artist_id=${spotifyArtistId}`, headers).catch((e) => {
+    console.warn("songstats_info_failed", (e as Error).message);
+    return null;
+  });
+
+  await delay();
+
+  const topTracksData = await fetchSongstats(`/artists/top_tracks?spotify_artist_id=${spotifyArtistId}&source=spotify&metric=streams&scope=total`, headers).catch((e) => {
+    console.warn("songstats_top_tracks_failed", (e as Error).message);
+    return null;
+  });
 
   if (!stats && !info) {
-    console.warn("songstats_enrichment_failed: both calls failed", {
-      statsErr: statsRes.status === "rejected" ? (statsRes.reason as Error).message : undefined,
-      infoErr: infoRes.status === "rejected" ? (infoRes.reason as Error).message : undefined,
-    });
+    console.warn("songstats_enrichment_failed: both stats and info calls returned null");
     return null;
   }
 
