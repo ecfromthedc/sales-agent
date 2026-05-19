@@ -15,6 +15,18 @@ import type { Env } from "../lib/env";
 
 const SONGSTATS_BASE = "https://songstats.p.rapidapi.com";
 
+export interface TrackStats {
+  name: string;
+  artist: string;
+  totalStreams: number;
+  popularity: number | null;
+  playlistsCurrent: number | null;
+  playlistsEditorialCurrent: number | null;
+  playlistReachCurrent: number | null;
+  releaseDate?: string;
+  label?: string;
+}
+
 export interface SongstatsEnrichment {
   name: string;
   country?: string;
@@ -31,11 +43,7 @@ export interface SongstatsEnrichment {
     playlistReachCurrent: number | null;
     chartsCurrent: number | null;
   };
-  topTracks: Array<{
-    name: string;
-    artist: string;
-    totalStreams: number;
-  }>;
+  topTracks: TrackStats[];
   social: {
     instagramFollowers: number | null;
     tiktokFollowers: number | null;
@@ -95,13 +103,42 @@ export async function enrichFromSongstats(
 
   const artistInfo = info?.artist_info ?? stats?.artist_info ?? {};
 
-  // Extract top tracks from nested response
-  const rawTopTracks = topTracksData?.data?.[0]?.top_tracks ?? [];
-  const topTracks = rawTopTracks.slice(0, 5).map((t: any) => ({
-    name: t.track_name ?? "Unknown",
-    artist: t.artist_name ?? artistInfo.name ?? "Unknown",
-    totalStreams: t.rank_value ?? 0,
-  }));
+  // Extract top tracks and fetch per-track popularity scores
+  const rawTopTracks = (topTracksData?.data?.[0]?.top_tracks ?? []).slice(0, 5);
+  const topTracks: TrackStats[] = [];
+
+  for (const t of rawTopTracks) {
+    const trackId = t.songstats_track_id;
+    const base: TrackStats = {
+      name: t.track_name ?? "Unknown",
+      artist: t.artist_name ?? artistInfo.name ?? "Unknown",
+      totalStreams: t.rank_value ?? 0,
+      popularity: null,
+      playlistsCurrent: null,
+      playlistsEditorialCurrent: null,
+      playlistReachCurrent: null,
+    };
+
+    if (trackId) {
+      await delay();
+      const trackStats = await fetchSongstats(
+        `/tracks/stats?songstats_track_id=${trackId}&source=spotify`, headers,
+      ).catch(() => null);
+
+      if (trackStats) {
+        const td = trackStats.stats?.[0]?.data;
+        const ti = trackStats.track_info;
+        base.popularity = td?.popularity_current ?? null;
+        base.playlistsCurrent = td?.playlists_current ?? null;
+        base.playlistsEditorialCurrent = td?.playlists_editorial_current ?? null;
+        base.playlistReachCurrent = td?.playlist_reach_current ?? null;
+        base.releaseDate = ti?.release_date ?? undefined;
+        base.label = ti?.labels?.[0]?.name ?? undefined;
+      }
+    }
+
+    topTracks.push(base);
+  }
 
   return {
     name: artistInfo.name ?? "Unknown",

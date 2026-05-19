@@ -91,7 +91,7 @@ Output a single-page brief in plain prose with these sections, no preamble:
    - Social following (songstats.social — Instagram, TikTok, YouTube if available)
    - Genres (songstats.genres)
    - Related artists (songstats.relatedArtists)
-   - **Top 3-5 tracks** (songstats.topTracks) — list each track name with total streams. Format streams as human-readable (e.g., "1.5B streams", "240M streams"). These are total all-time Spotify streams per track.
+   - **Top 3-5 tracks** (songstats.topTracks) — for each track show: name, popularity score (0-100), total streams (human-readable, e.g. "1.5B"), current playlist count, and editorial playlist count. Flag tracks with high popularity (70+) as strong candidates for TikTok sound campaigns. Flag tracks with declining popularity vs high total streams as catalog plays that could be re-activated. This data directly informs which songs to push in RT campaigns.
    Fall back to enrichment.spotify only for release catalog (recentReleases) since Spotify's public API still returns those.
 4. Comparable RT clients (look at past campaigns in the enrichment data — find clients with similar genre, audience size, goals, or release timeline. Name 1-3 past clients whose results Eric can reference as proof points on the call. If no past campaigns match, say "no close comparables in campaign history.")
 5. Suggested angle (one paragraph, written in Eric's voice — direct, music-industry-specific, no generic marketing speak. Weave in the comparable client results if available.)
