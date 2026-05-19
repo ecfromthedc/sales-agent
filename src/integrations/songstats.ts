@@ -85,10 +85,13 @@ export async function enrichFromSongstats(
 
   await delay();
 
-  const topTracksData = await fetchSongstats(`/artists/top_tracks?spotify_artist_id=${spotifyArtistId}&source=spotify&metric=streams&scope=total`, headers).catch((e) => {
-    console.warn("songstats_top_tracks_failed", (e as Error).message);
-    return null;
-  });
+  // Top tracks by streams (for total stream counts)
+  const topByStreams = await fetchSongstats(`/artists/top_tracks?spotify_artist_id=${spotifyArtistId}&source=spotify&metric=streams&scope=total`, headers).catch(() => null);
+
+  await delay();
+
+  // Top tracks by popularity (for current momentum scores)
+  const topByPopularity = await fetchSongstats(`/artists/top_tracks?spotify_artist_id=${spotifyArtistId}&source=spotify&metric=popularity&scope=total`, headers).catch(() => null);
 
   if (!stats && !info) {
     console.warn("songstats_enrichment_failed: both stats and info calls returned null");
@@ -103,42 +106,25 @@ export async function enrichFromSongstats(
 
   const artistInfo = info?.artist_info ?? stats?.artist_info ?? {};
 
-  // Extract top tracks and fetch per-track popularity scores
-  const rawTopTracks = (topTracksData?.data?.[0]?.top_tracks ?? []).slice(0, 3);
-  const topTracks: TrackStats[] = [];
+  // Merge top tracks by streams with popularity scores — no extra per-track calls needed
+  const streamTracks = (topByStreams?.data?.[0]?.top_tracks ?? []).slice(0, 3);
+  const popTracks = topByPopularity?.data?.[0]?.top_tracks ?? [];
 
-  for (const t of rawTopTracks) {
-    const trackId = t.songstats_track_id;
-    const base: TrackStats = {
-      name: t.track_name ?? "Unknown",
-      artist: t.artist_name ?? artistInfo.name ?? "Unknown",
-      totalStreams: t.rank_value ?? 0,
-      popularity: null,
-      playlistsCurrent: null,
-      playlistsEditorialCurrent: null,
-      playlistReachCurrent: null,
-    };
-
-    if (trackId) {
-      await delay();
-      const trackStats = await fetchSongstats(
-        `/tracks/stats?songstats_track_id=${trackId}&source=spotify`, headers,
-      ).catch(() => null);
-
-      if (trackStats) {
-        const td = trackStats.stats?.[0]?.data;
-        const ti = trackStats.track_info;
-        base.popularity = td?.popularity_current ?? null;
-        base.playlistsCurrent = td?.playlists_current ?? null;
-        base.playlistsEditorialCurrent = td?.playlists_editorial_current ?? null;
-        base.playlistReachCurrent = td?.playlist_reach_current ?? null;
-        base.releaseDate = ti?.release_date ?? undefined;
-        base.label = ti?.labels?.[0]?.name ?? undefined;
-      }
-    }
-
-    topTracks.push(base);
+  // Build popularity lookup by track ID
+  const popMap = new Map<string, number>();
+  for (const t of popTracks) {
+    if (t.songstats_track_id) popMap.set(t.songstats_track_id, t.rank_value ?? 0);
   }
+
+  const topTracks: TrackStats[] = streamTracks.map((t: any) => ({
+    name: t.track_name ?? "Unknown",
+    artist: t.artist_name ?? artistInfo.name ?? "Unknown",
+    totalStreams: t.rank_value ?? 0,
+    popularity: popMap.get(t.songstats_track_id) ?? null,
+    playlistsCurrent: null,
+    playlistsEditorialCurrent: null,
+    playlistReachCurrent: null,
+  }));
 
   return {
     name: artistInfo.name ?? "Unknown",
