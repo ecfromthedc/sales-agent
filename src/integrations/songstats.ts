@@ -53,6 +53,8 @@ export interface SongstatsEnrichment {
   platformLinks: Array<{ source: string; url: string }>;
 }
 
+const CACHE_TTL = 86400; // 24 hours in seconds
+
 export async function enrichFromSongstats(
   spotifyArtistId: string,
   env: Env,
@@ -60,6 +62,14 @@ export async function enrichFromSongstats(
   if (!env.RAPIDAPI_KEY) {
     console.warn("songstats_skip: RAPIDAPI_KEY not set");
     return null;
+  }
+
+  // Check KV cache first — full enrichment result cached per artist
+  const cacheKey = `songstats:${spotifyArtistId}`;
+  const cached = await env.STATE.get(cacheKey, "json") as SongstatsEnrichment | null;
+  if (cached) {
+    console.log("songstats_cache_hit", { spotifyArtistId });
+    return cached;
   }
 
   const headers = {
@@ -126,7 +136,7 @@ export async function enrichFromSongstats(
     playlistReachCurrent: null,
   }));
 
-  return {
+  const result: SongstatsEnrichment = {
     name: artistInfo.name ?? "Unknown",
     country: artistInfo.country ?? undefined,
     genres: artistInfo.genres ?? [],
@@ -157,6 +167,12 @@ export async function enrichFromSongstats(
       url: l.url,
     })),
   };
+
+  // Cache the result — 24h TTL, saves API calls on repeat lookups
+  await env.STATE.put(cacheKey, JSON.stringify(result), { expirationTtl: CACHE_TTL }).catch(() => {});
+  console.log("songstats_cached", { spotifyArtistId, tracks: result.topTracks.length });
+
+  return result;
 }
 
 function findSource(stats: any[] | undefined, source: string): any | null {
