@@ -5,10 +5,15 @@
 
 pub mod claude_api;
 pub mod config;
+pub mod drafts;
+pub mod events;
 pub mod generator;
+pub mod imessage;
 pub mod pipeline;
 pub mod pocket;
+pub mod regen;
 pub mod render;
+pub mod ship;
 pub mod slack;
 pub mod socket_mode;
 pub mod sources;

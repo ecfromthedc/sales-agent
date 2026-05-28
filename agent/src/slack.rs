@@ -51,13 +51,24 @@ struct CompletedFile {
     id: String,
 }
 
-/// Outcome of a successful upload — useful for downstream logging or follow-up
-/// edits in the brief thread.
+#[derive(Debug, Deserialize)]
+struct ChatPostMessageResponse {
+    ok: bool,
+    error: Option<String>,
+    ts: Option<String>,
+}
+
+/// Outcome of a successful carousel publish — used by the pipeline to register
+/// the draft into the in-memory state store so we can route replies/reactions
+/// back to it.
 #[derive(Debug, Clone)]
 pub struct UploadResult {
     pub file_ids: Vec<String>,
     pub channel: String,
-    pub thread_ts: Option<String>,
+    /// Thread-root message ts. Always populated. If the upload created a new
+    /// thread (no `thread_ts` was passed), this is the new root's ts. If the
+    /// upload landed in an existing thread, this is that existing thread_ts.
+    pub parent_ts: String,
 }
 
 impl<'a> SlackClient<'a> {
@@ -97,6 +108,14 @@ impl<'a> SlackClient<'a> {
     }
 
     /// Lower-level: upload arbitrary PNGs with a caller-supplied comment.
+    ///
+    /// If `thread_ts` is `Some`, the PNGs and `initial_comment` are attached
+    /// into that existing thread (parent_ts == that thread_ts).
+    ///
+    /// If `thread_ts` is `None`, a fresh `chat.postMessage` is posted first to
+    /// establish a thread root (so we know the parent ts deterministically and
+    /// can listen for replies/reactions on it). PNGs then attach into that
+    /// new thread without a duplicate initial_comment.
     pub async fn upload_pngs_to_thread(
         &self,
         channel: &str,
@@ -108,6 +127,24 @@ impl<'a> SlackClient<'a> {
             bail!("no PNG paths supplied — nothing to upload");
         }
         let token = self.bot_token()?;
+
+        // Establish the thread root. Either re-use the caller's thread_ts, or
+        // post the initial_comment as a new message and use that ts.
+        let (parent_ts, attach_initial_comment): (String, Option<&str>) = match thread_ts {
+            Some(ts) => {
+                // Replying inside an existing thread (e.g., from a brief).
+                // Keep the initial_comment so the carousel block has context.
+                (ts.to_string(), Some(initial_comment))
+            }
+            None => {
+                let new_ts = self
+                    .post_message(token, channel, initial_comment, None)
+                    .await
+                    .context("chat.postMessage for thread root")?;
+                // Avoid duplicating the comment on the upload step.
+                (new_ts, None)
+            }
+        };
 
         // Step 1+2: per-file upload-URL request, then PUT bytes.
         let mut uploaded: Vec<UploadedFile> = Vec::with_capacity(png_paths.len());
@@ -136,17 +173,76 @@ impl<'a> SlackClient<'a> {
             });
         }
 
-        // Step 3: single completeUploadExternal — shares all files to the thread.
+        // Step 3: single completeUploadExternal — shares all files into the thread.
         let file_ids = self
-            .complete_upload(token, channel, thread_ts, initial_comment, &uploaded)
+            .complete_upload(
+                token,
+                channel,
+                Some(&parent_ts),
+                attach_initial_comment.unwrap_or(""),
+                &uploaded,
+            )
             .await
             .context("completeUploadExternal")?;
 
         Ok(UploadResult {
             file_ids,
             channel: channel.to_string(),
-            thread_ts: thread_ts.map(str::to_string),
+            parent_ts,
         })
+    }
+
+    /// Post a plain text message via `chat.postMessage`. Returns the new
+    /// message ts. Used for thread-root establishment and for follow-up
+    /// notifications (e.g., "🔒 ready to ship").
+    pub async fn post_message(
+        &self,
+        token: &str,
+        channel: &str,
+        text: &str,
+        thread_ts: Option<&str>,
+    ) -> Result<String> {
+        let mut body = serde_json::json!({
+            "channel": channel,
+            "text": text,
+            "unfurl_links": false,
+            "unfurl_media": false,
+        });
+        if let Some(ts) = thread_ts {
+            body["thread_ts"] = serde_json::Value::String(ts.to_string());
+        }
+        let resp: ChatPostMessageResponse = self
+            .http
+            .post(format!("{SLACK_API}/chat.postMessage"))
+            .bearer_auth(token)
+            .header("Content-Type", "application/json; charset=utf-8")
+            .body(body.to_string())
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        if !resp.ok {
+            bail!(
+                "chat.postMessage returned ok=false: {}",
+                resp.error.unwrap_or_else(|| "unknown_error".into())
+            );
+        }
+        resp.ts
+            .ok_or_else(|| anyhow!("chat.postMessage response missing `ts`"))
+    }
+
+    /// Public convenience wrapper around `post_message` that pulls the bot
+    /// token from `Config`. Returns the new message ts.
+    pub async fn post_thread_message(
+        &self,
+        channel: &str,
+        thread_ts: &str,
+        text: &str,
+    ) -> Result<String> {
+        let token = self.bot_token()?;
+        self.post_message(token, channel, text, Some(thread_ts))
+            .await
     }
 
     async fn get_upload_url(

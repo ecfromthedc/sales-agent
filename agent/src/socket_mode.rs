@@ -174,14 +174,7 @@ where
             Err(anyhow!("slack requested disconnect"))
         }
         Some("slash_commands") => handle_slash_command(envelope, sink, cfg, sources).await,
-        Some("events_api") => {
-            // Not handled yet, but ack so Slack doesn't redeliver.
-            if let Some(env_id) = envelope.envelope_id.as_deref() {
-                send_ack(sink, env_id, None).await?;
-            }
-            debug!("socket-mode events_api envelope (ignored)");
-            Ok(())
-        }
+        Some("events_api") => handle_events_api(envelope, sink, cfg, sources).await,
         Some("interactive") => {
             if let Some(env_id) = envelope.envelope_id.as_deref() {
                 send_ack(sink, env_id, None).await?;
@@ -194,6 +187,39 @@ where
             Ok(())
         }
     }
+}
+
+/// Events API envelope: ack immediately, then dispatch the inner event so
+/// reaction_added and thread-reply messages can route into the drafts store.
+/// The dispatch is spawned because the ack must land within 3s.
+async fn handle_events_api<S>(
+    envelope: Envelope,
+    sink: &mut S,
+    cfg: &Config,
+    sources: &Arc<SourceIndex>,
+) -> Result<()>
+where
+    S: SinkExt<Message> + Unpin,
+    <S as futures_util::Sink<Message>>::Error: std::fmt::Display + Send + Sync + 'static,
+{
+    if let Some(env_id) = envelope.envelope_id.as_deref() {
+        send_ack(sink, env_id, None).await?;
+    }
+    let payload = match envelope.payload {
+        Some(p) => p,
+        None => {
+            debug!("events_api envelope has no payload — ignored");
+            return Ok(());
+        }
+    };
+    let cfg = Arc::new(cfg.clone());
+    let sources = Arc::clone(sources);
+    tokio::spawn(async move {
+        if let Err(e) = crate::events::handle_event_callback(cfg, sources, payload).await {
+            warn!(error = %e, "events_api dispatch failed");
+        }
+    });
+    Ok(())
 }
 
 /// Slash-command envelope: ack inline within 3s, then spawn the pipeline.

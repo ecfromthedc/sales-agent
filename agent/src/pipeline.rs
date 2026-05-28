@@ -111,14 +111,25 @@ pub async fn render_and_publish(
                 .upload_carousel_draft(d, &pngs, channel, thread_ts)
                 .await
             {
-                Ok(result) => info!(
-                    ?task_id,
-                    slug = %d.slug,
-                    channel = %result.channel,
-                    thread_ts = ?result.thread_ts,
-                    file_ids = result.file_ids.len(),
-                    "carousel uploaded to Slack thread"
-                ),
+                Ok(result) => {
+                    info!(
+                        ?task_id,
+                        slug = %d.slug,
+                        channel = %result.channel,
+                        parent_ts = %result.parent_ts,
+                        file_ids = result.file_ids.len(),
+                        "carousel uploaded to Slack thread"
+                    );
+                    // Register the draft so reply/reaction handlers can route
+                    // edit notes and :ship_it: signals back to it. PNG paths
+                    // are kept so we can re-render targeted slides on demand.
+                    crate::drafts::store().register(
+                        result.channel.clone(),
+                        result.parent_ts.clone(),
+                        d.clone(),
+                        pngs.clone(),
+                    );
+                }
                 Err(e) => warn!(
                     ?task_id,
                     slug = %d.slug,

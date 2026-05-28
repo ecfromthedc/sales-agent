@@ -21,6 +21,9 @@ pub struct Config {
     /// Root of the Obsidian Vault (resolves Alexandria note paths).
     /// Defaults to `~/Documents/Obsidian Vault`.
     pub obsidian_vault: PathBuf,
+    /// iMessage recipient for ship-it auto-send. Phone number with `+` country
+    /// code or iCloud email. When unset, ship-it skips the iMessage step.
+    pub imessage_recipient: Option<String>,
     pub log_level: String,
 }
 
@@ -65,6 +68,7 @@ impl Config {
             neo4j_search_endpoint: env::var("RT_NEO4J_SEARCH_ENDPOINT").ok(),
             course_index_path: repo_root.join("course-index.md"),
             obsidian_vault,
+            imessage_recipient: env::var("RT_IMESSAGE_RECIPIENT").ok(),
             log_level: env::var("RUST_LOG").unwrap_or_else(|_| "info,rt_carousel_agent=debug".to_string()),
         })
     }
