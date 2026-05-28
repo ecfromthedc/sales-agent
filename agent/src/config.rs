@@ -11,9 +11,16 @@ pub struct Config {
     pub anthropic_api_key: Option<String>,
     pub slack_bot_token: Option<String>,
     pub slack_signing_secret: Option<String>,
+    /// Socket Mode app token (`xapp-…`). When present, the agent opens an
+    /// outbound WebSocket to Slack and receives slash commands without
+    /// requiring a public HTTP endpoint.
+    pub slack_app_token: Option<String>,
     pub default_slack_channel: String,
     pub neo4j_search_endpoint: Option<String>,
     pub course_index_path: PathBuf,
+    /// Root of the Obsidian Vault (resolves Alexandria note paths).
+    /// Defaults to `~/Documents/Obsidian Vault`.
+    pub obsidian_vault: PathBuf,
     pub log_level: String,
 }
 
@@ -38,6 +45,13 @@ impl Config {
                 .join("Projects/active/rt-pocket/index.html"),
         };
 
+        let obsidian_vault = match env::var("RT_OBSIDIAN_VAULT") {
+            Ok(p) => PathBuf::from(p),
+            Err(_) => dirs::home_dir()
+                .context("HOME unset")?
+                .join("Documents/Obsidian Vault"),
+        };
+
         Ok(Self {
             bind_addr: env::var("RT_CAROUSEL_BIND").unwrap_or_else(|_| "127.0.0.1:7677".to_string()),
             repo_root: repo_root.clone(),
@@ -45,10 +59,12 @@ impl Config {
             anthropic_api_key: env::var("ANTHROPIC_API_KEY").ok(),
             slack_bot_token: env::var("SLACK_BOT_TOKEN").ok(),
             slack_signing_secret: env::var("SLACK_SIGNING_SECRET").ok(),
+            slack_app_token: env::var("SLACK_APP_TOKEN").ok(),
             default_slack_channel: env::var("RT_CAROUSEL_SLACK_CHANNEL")
                 .unwrap_or_else(|_| "C0B5X88QQ0K".to_string()),
             neo4j_search_endpoint: env::var("RT_NEO4J_SEARCH_ENDPOINT").ok(),
             course_index_path: repo_root.join("course-index.md"),
+            obsidian_vault,
             log_level: env::var("RUST_LOG").unwrap_or_else(|_| "info,rt_carousel_agent=debug".to_string()),
         })
     }

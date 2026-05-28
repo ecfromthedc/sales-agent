@@ -6,8 +6,10 @@
 pub mod claude_api;
 pub mod config;
 pub mod generator;
+pub mod pipeline;
 pub mod pocket;
 pub mod render;
 pub mod slack;
+pub mod socket_mode;
 pub mod sources;
 pub mod types;
