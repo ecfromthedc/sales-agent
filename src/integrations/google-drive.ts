@@ -108,7 +108,7 @@ export async function downloadTranscriptText(
  *
  * Returns ISO string or undefined.
  */
-function parseMeetingStartFromName(name: string): string | undefined {
+export function parseMeetingStartFromName(name: string): string | undefined {
   // Match YYYY[/-]MM[/-]DD HH:MM
   const m = name.match(/(\d{4})[\/-](\d{2})[\/-](\d{2})[\s,]+(\d{1,2})[:.]?(\d{2})/);
   if (!m) return undefined;
