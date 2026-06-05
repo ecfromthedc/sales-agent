@@ -8,6 +8,7 @@ Closes the lag between "great Calendly call" and "send the pitch" — under 15 m
 
 1. **Pre-call brief** — Calendly booking comes in → agent enriches via Spotify + Gmail + Notion CRM + Tides Tracker + web → one-page brief lands in Notion before the meeting
 2. **Post-call pitch** — Meet transcript lands → agent builds a Swiss-grid custom pitch deck (HTML→PDF) + drafts a follow-up email quoting the call → attached to the Notion deal record within 15 min
+3. **Proposal draft** — manual rerun after transcript exists → agent creates a client-facing proposal HTML/PDF artifact, Eric-style follow-up email, assumptions/missing-data list, and source-claim audit
 
 ## Stack
 
@@ -41,10 +42,11 @@ src/
   triggers/
     calendly-webhook.ts     POST /webhooks/calendly (booking.created)
     transcript-webhook.ts   POST /webhooks/transcript (granola or drive)
-    manual.ts               POST /runs/:dealId/:agent (rerun button)
+    manual.ts               POST /runs/:dealId/:agent (pre-call, post-call, proposal)
   agents/
     pre-call-brief.ts       Runs the pre-call enrichment + brief composition
     post-call-pitch.ts      Runs the post-call deck + email composition
+    proposal-drafter.ts     Runs the proposal artifact composition
   integrations/
     calendly.ts             Booking payload parser, event-type lookup
     notion.ts               Deal / Transcript / Pitch Artifact CRUD

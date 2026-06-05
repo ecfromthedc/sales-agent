@@ -9,3 +9,6 @@ dist/
 .rotation-log
 .dev.dev.vars.bak
 *.bak
+.secrets/
+logs/
+scripts/scraper/.venv/

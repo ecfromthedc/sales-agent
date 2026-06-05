@@ -4,7 +4,7 @@
  * HTTP routes:
  *   POST /webhooks/calendly       Calendly invitee.created → pre-call brief
  *   POST /webhooks/transcript     Drive push notification (optional, future)
- *   POST /runs/:dealId/:agent     Manual rerun ("pre-call" | "post-call")
+ *   POST /runs/:dealId/:agent     Manual rerun ("pre-call" | "post-call" | "proposal")
  *   GET  /health                  Health check
  *
  * Cron:
@@ -18,6 +18,10 @@ import { handleManualRerun } from "./triggers/manual";
 import { pollTranscripts } from "./triggers/transcript-poll";
 import { pollCalendly } from "./triggers/calendly-poll";
 import { handleTestPreCall } from "./triggers/test";
+import { handleSlackInteraction } from "./triggers/slack-interactions";
+import { handleSlackEvent } from "./triggers/slack-events";
+import { handleFirefliesWebhook } from "./triggers/fireflies-webhook";
+import { serveProposal } from "./triggers/proposal-public";
 
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -41,10 +45,28 @@ export default {
         return await handleTestPreCall(req, env, ctx);
       }
 
-      const manualMatch = url.pathname.match(/^\/runs\/([^/]+)\/(pre-call|post-call)$/);
+      if (route === "POST /slack/interactions") {
+        return await handleSlackInteraction(req, env, ctx);
+      }
+
+      if (route === "POST /slack/events") {
+        return await handleSlackEvent(req, env, ctx);
+      }
+
+      if (route === "POST /webhooks/fireflies") {
+        return await handleFirefliesWebhook(req, env, ctx);
+      }
+
+      // Public live proposal link (no auth — clients open this).
+      const proposalMatch = url.pathname.match(/^\/p\/([^/]+)$/);
+      if (req.method === "GET" && proposalMatch) {
+        return await serveProposal(proposalMatch[1], env);
+      }
+
+      const manualMatch = url.pathname.match(/^\/runs\/([^/]+)\/(pre-call|post-call|proposal)$/);
       if (req.method === "POST" && manualMatch) {
         const [, dealId, agent] = manualMatch;
-        return await handleManualRerun(dealId, agent as "pre-call" | "post-call", env, ctx);
+        return await handleManualRerun(dealId, agent as "pre-call" | "post-call" | "proposal", env, ctx);
       }
 
       return json({ error: "not_found", route }, 404);

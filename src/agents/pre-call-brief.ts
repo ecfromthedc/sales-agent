@@ -15,6 +15,7 @@
 import type { Env } from "../lib/env";
 import { enrichFromSpotify } from "../integrations/spotify";
 import { enrichFromSongstats } from "../integrations/songstats";
+import { enrichFromChartmetric } from "../integrations/chartmetric";
 import { searchGmailHistory } from "../integrations/gmail";
 import { lookupCRM } from "../integrations/crm-lookup";
 import { upsertDeal, type DealUpsertInput } from "../integrations/notion";
@@ -43,10 +44,11 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       ? spotifyLink.match(/artist\/([a-zA-Z0-9]{22})/)?.[1] ?? null
       : null;
 
-    // Phase 1: Songstats + Spotify + Gmail in parallel (Songstats is sequential internally)
-    const [spotify, songstats, gmail] = await Promise.allSettled([
+    // Phase 1: Songstats + Spotify + Chartmetric + Gmail in parallel (Songstats is sequential internally)
+    const [spotify, songstats, chartmetric, gmail] = await Promise.allSettled([
       spotifyLink ? enrichFromSpotify(spotifyLink, env) : Promise.resolve(null),
       spotifyArtistId ? enrichFromSongstats(spotifyArtistId, env) : Promise.resolve(null),
+      enrichFromChartmetric({ spotifyArtistId, artistName: input.inviteeName }, env),
       searchGmailHistory(input.inviteeEmail, env),
     ]);
 
@@ -72,19 +74,22 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       step: "enrichment_done",
       spotify: spotify.status,
       songstats: songstats.status,
+      chartmetric: chartmetric.status,
       gmail: gmail.status,
       crmMatches: crmLookup.totalCampaignsFound,
       spotifyErr: spotify.status === "rejected" ? (spotify.reason as Error)?.message : undefined,
       songstatsErr: songstats.status === "rejected" ? (songstats.reason as Error)?.message : undefined,
+      chartmetricErr: chartmetric.status === "rejected" ? (chartmetric.reason as Error)?.message : undefined,
       gmailErr: gmail.status === "rejected" ? (gmail.reason as Error)?.message : undefined,
     });
 
     const enrichment = {
       spotify: spotify.status === "fulfilled" ? spotify.value : null,
       songstats: songstatsData,
+      chartmetric: chartmetric.status === "fulfilled" ? chartmetric.value : null,
       gmail: gmail.status === "fulfilled" ? gmail.value : null,
       crm: crmLookup,
-      failures: [spotify, songstats, gmail]
+      failures: [spotify, songstats, chartmetric, gmail]
         .filter((r) => r.status === "rejected")
         .map((r) => (r as PromiseRejectedResult).reason?.message ?? "unknown"),
     };

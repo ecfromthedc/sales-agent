@@ -1,13 +1,22 @@
 /**
- * Google Drive — polls the Meet Recordings folder for new transcript files.
+ * Google Drive — polls for new Meet transcript files.
  *
- * Google Meet auto-transcription (enabled in Workspace Admin) drops transcript
- * files into a "Meet Recordings" folder in the host's Drive. File naming pattern:
+ * Google Meet drops transcripts and Gemini notes into "Meet Recordings" folders
+ * in the organizer's Drive. There can be multiple such folders (primary + shared).
+ * We search THREE ways to guarantee we find every transcript:
+ *
+ *   1. Primary "Meet Recordings" folder (MEET_RECORDINGS_FOLDER_ID)
+ *   2. Secondary "Meet Recordings" folder (MEET_RECORDINGS_FOLDER_ID_2, optional)
+ *   3. Broad Drive-wide search for any file named "Transcript" or "Notes by Gemini"
+ *      owned by the organizer, regardless of folder — catches edge cases where
+ *      Google puts transcripts in unexpected locations.
+ *
+ * File naming patterns:
  *   "<Meeting Title> - Transcript YYYY/MM/DD HH:MM PDT.txt"   (older)
  *   "<Meeting Title> - YYYY/MM/DD HH:MM PDT - Transcript"      (newer Google Docs)
+ *   "Meeting started YYYY/MM/DD HH:MM TZ - Notes by Gemini"    (Gemini notes)
  *
- * We use a cron trigger (every 5 min) to list files in the folder modified since
- * the last successful poll. State persists in KV under `transcript-poll:cursor`.
+ * State persists in KV under `transcript-poll:cursor`.
  */
 
 import type { Env } from "../lib/env";
@@ -27,28 +36,97 @@ const DRIVE_API = "https://www.googleapis.com/drive/v3";
 
 /**
  * List transcript files modified since `since` ISO timestamp.
- * Returns newest-first.
+ * Searches both configured folders AND does a broad Drive-wide sweep.
+ * Deduplicates by file ID. Returns newest-first.
  */
 export async function listMeetTranscriptsSince(
   since: string,
   env: Env,
 ): Promise<MeetTranscriptFile[]> {
-  if (!env.MEET_RECORDINGS_FOLDER_ID) {
-    console.warn("drive_list_skipped_no_folder_id");
-    return [];
-  }
   const token = await getGoogleAccessToken(env);
 
-  // Drive query: in the recordings folder, file is either a Chat Transcript
-  // OR a "Notes by Gemini" summary (Workspace Business/Enterprise generates
-  // these instead of raw transcripts on some plans). Modified after `since`.
-  const q = [
-    `'${env.MEET_RECORDINGS_FOLDER_ID}' in parents`,
-    `(name contains 'Transcript' or name contains 'Notes by Gemini')`,
-    `modifiedTime > '${since}'`,
-    `trashed = false`,
-  ].join(" and ");
+  // Build parallel search queries:
+  // 1. Primary Meet Recordings folder
+  // 2. Secondary Meet Recordings folder (if configured)
+  // 3. Broad Drive-wide search for transcript/notes files
+  const queries: string[] = [];
 
+  if (env.MEET_RECORDINGS_FOLDER_ID) {
+    queries.push(
+      [
+        `'${env.MEET_RECORDINGS_FOLDER_ID}' in parents`,
+        `(name contains 'Transcript' or name contains 'Notes by Gemini')`,
+        `modifiedTime > '${since}'`,
+        `trashed = false`,
+      ].join(" and "),
+    );
+  }
+
+  if (env.MEET_RECORDINGS_FOLDER_ID_2) {
+    queries.push(
+      [
+        `'${env.MEET_RECORDINGS_FOLDER_ID_2}' in parents`,
+        `(name contains 'Transcript' or name contains 'Notes by Gemini')`,
+        `modifiedTime > '${since}'`,
+        `trashed = false`,
+      ].join(" and "),
+    );
+  }
+
+  // Broad sweep: any transcript/notes file anywhere in Drive, owned by me
+  queries.push(
+    [
+      `(name contains 'Transcript' or name contains 'Notes by Gemini')`,
+      `(mimeType = 'application/vnd.google-apps.document' or mimeType = 'text/plain')`,
+      `modifiedTime > '${since}'`,
+      `'me' in owners`,
+      `trashed = false`,
+    ].join(" and "),
+  );
+
+  if (queries.length === 0) {
+    console.warn("drive_list_skipped_no_queries");
+    return [];
+  }
+
+  // Run all queries in parallel
+  const results = await Promise.allSettled(
+    queries.map((q) => searchDrive(q, token)),
+  );
+
+  // Merge and deduplicate by file ID
+  const seen = new Set<string>();
+  const merged: MeetTranscriptFile[] = [];
+
+  for (const result of results) {
+    if (result.status === "rejected") {
+      console.error("drive_search_partial_failure", { error: (result.reason as Error).message });
+      continue;
+    }
+    for (const file of result.value) {
+      if (seen.has(file.id)) continue;
+      seen.add(file.id);
+      merged.push({
+        ...file,
+        inferredMeetingStart: parseMeetingStartFromName(file.name),
+      });
+    }
+  }
+
+  // Sort newest-first
+  merged.sort((a, b) => new Date(b.modifiedTime).getTime() - new Date(a.modifiedTime).getTime());
+
+  console.log("drive_transcript_search", {
+    since,
+    queriesRun: queries.length,
+    filesFound: merged.length,
+    fileNames: merged.map((f) => f.name),
+  });
+
+  return merged;
+}
+
+async function searchDrive(q: string, token: string): Promise<MeetTranscriptFile[]> {
   const params = new URLSearchParams({
     q,
     fields: "files(id,name,mimeType,createdTime,modifiedTime,webViewLink)",
@@ -63,14 +141,11 @@ export async function listMeetTranscriptsSince(
   });
 
   if (!res.ok) {
-    throw new Error(`drive_list_failed: ${res.status} ${await res.text()}`);
+    throw new Error(`drive_search_failed: ${res.status} ${await res.text()}`);
   }
 
   const j = (await res.json()) as { files: MeetTranscriptFile[] };
-  return (j.files ?? []).map((f) => ({
-    ...f,
-    inferredMeetingStart: parseMeetingStartFromName(f.name),
-  }));
+  return j.files ?? [];
 }
 
 /**

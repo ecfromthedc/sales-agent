@@ -125,12 +125,16 @@ push_secret() {
 
 for k in ANTHROPIC_API_KEY NOTION_API_KEY SPOTIFY_CLIENT_ID SPOTIFY_CLIENT_SECRET \
          GMAIL_OAUTH_CLIENT_ID GMAIL_OAUTH_CLIENT_SECRET GMAIL_OAUTH_REFRESH_TOKEN \
-         CALENDLY_PERSONAL_ACCESS_TOKEN TIDES_TRACKER_API_KEY; do
+         CALENDLY_PERSONAL_ACCESS_TOKEN TIDES_TRACKER_API_KEY \
+         SLACK_BOT_TOKEN SLACK_SIGNING_SECRET FIREFLIES_API_KEY RAPIDAPI_KEY CHARTMETRIC_REFRESH_TOKEN TEST_AUTH_KEY; do
   push_secret "$k"
 done
 # Placeholder for the Calendly webhook signing key — populated after subscription.
 echo "placeholder" | "$WRANGLER" secret put CALENDLY_WEBHOOK_SIGNING_KEY >/dev/null 2>&1 || true
 echo "  → CALENDLY_WEBHOOK_SIGNING_KEY: placeholder (updated post-subscribe)"
+# Placeholder for Fireflies webhook secret — set after configuring in Fireflies dashboard.
+echo "placeholder" | "$WRANGLER" secret put FIREFLIES_WEBHOOK_SECRET >/dev/null 2>&1 || true
+echo "  → FIREFLIES_WEBHOOK_SECRET: placeholder (set in Fireflies dashboard)"
 
 echo
 echo "=== [7/8] Typecheck + Deploy ==="

@@ -17,6 +17,7 @@ Closes the lag between a Calendly strategy call and sending the pitch — target
 |------|---------|--------|
 | **Pre-call brief** | Calendly `invitee.created` (webhook or 5‑min poll) | One-page brief in Notion before the meeting |
 | **Post-call pitch** | Google Drive transcript (5‑min poll) or manual rerun | Swiss-grid HTML→PDF deck (R2), follow-up email draft, action items → Notion |
+| **Proposal draft** | Manual `POST /runs/:dealId/proposal` after transcript exists | Client-facing proposal HTML/PDF placeholder, follow-up email, assumptions/missing data/source claims → Notion |
 
 **Not in scope:** live browser chat, Salesforce/HubSpot, or a local `crm/` / `knowledge-base/` folder. CRM is **Notion**; enrichment is **Spotify + Gmail + Tides Tracker**.
 
@@ -50,6 +51,7 @@ src/
   agents/
     pre-call-brief.ts            Enrich → compose brief → Notion
     post-call-pitch.ts           Transcript → deck + email → Notion + R2
+    proposal-drafter.ts          Deal + transcript → proposal artifact → Notion + R2 seam
   integrations/
     calendly.ts, notion.ts, spotify.ts, gmail.ts,
     google-drive.ts, google-auth.ts, tides-tracker.ts, pdf.ts
@@ -73,6 +75,7 @@ wrangler.toml                    Worker name, vars, R2, KV, cron
 | `POST` | `/test/pre-call` | Dev smoke test |
 | `POST` | `/runs/:dealId/pre-call` | Rerun pre-call agent |
 | `POST` | `/runs/:dealId/post-call` | Rerun post-call agent |
+| `POST` | `/runs/:dealId/proposal` | Draft client-facing proposal artifact from deal transcript |
 
 Calendly event type: `https://calendly.com/ec-risingtidesent/rising-tides-strategy-session`
 
@@ -160,7 +163,7 @@ Never commit `.dev.vars`, `.env`, or paste secrets into chat logs.
 
 - Wire or fix Calendly webhook signature verification
 - Improve transcript filename parsing in `google-drive.ts`
-- Tune pre-call/post-call system prompts without breaking JSON output contracts
+- Tune pre-call/post-call/proposal system prompts without breaking JSON output contracts
 - Add Notion property mappings when schema changes (`scripts/create_notion_schema.py`)
 - Debug cron poll cursors in KV (`transcript-poll.ts`, `calendly-poll.ts`)
 - Harden deploy script or wrangler bindings after infra changes
