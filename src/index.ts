@@ -19,6 +19,7 @@ import { handleManualRerun } from "./triggers/manual";
 import { pollTranscripts } from "./triggers/transcript-poll";
 import { pollCalendly } from "./triggers/calendly-poll";
 import { handleTestPreCall } from "./triggers/test";
+import { handleSmokeTest } from "./triggers/smoke";
 import { readRunState, shapeStatus, recordRun, recordError } from "./lib/run-state";
 
 const SERVICE = "rt-sales-call-agent";
@@ -55,6 +56,10 @@ export default {
 
       if (route === "POST /test/pre-call") {
         return await handleTestPreCall(req, env, ctx);
+      }
+
+      if (route === "POST /test/smoke") {
+        return await handleSmokeTest(req, env, ctx);
       }
 
       const manualMatch = url.pathname.match(/^\/runs\/([^/]+)\/(pre-call|post-call)$/);
