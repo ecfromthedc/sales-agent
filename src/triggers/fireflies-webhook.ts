@@ -11,6 +11,7 @@
 
 import type { Env } from "../lib/env";
 import { runProposalFromMeeting } from "../agents/proposal-drafter";
+import { verifyFirefliesSignature } from "../lib/proposal-security";
 
 const FIREFLIES_API = "https://api.fireflies.ai/graphql";
 
@@ -30,7 +31,7 @@ export async function handleFirefliesWebhook(
   // Verify signature if secret is configured
   if (env.FIREFLIES_WEBHOOK_SECRET) {
     const signature = req.headers.get("x-hub-signature") ?? "";
-    const valid = await verifySignature(rawBody, signature, env.FIREFLIES_WEBHOOK_SECRET);
+    const valid = await verifyFirefliesSignature(rawBody, signature, env.FIREFLIES_WEBHOOK_SECRET);
     if (!valid) {
       console.warn("fireflies_webhook_sig_invalid");
       return json({ error: "invalid_signature" }, 401);
@@ -207,28 +208,6 @@ async function fetchFirefliesTranscript(
   }
 
   return body.data?.transcript ?? null;
-}
-
-async function verifySignature(payload: string, signature: string, secret: string): Promise<boolean> {
-  if (!signature) return false;
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(payload));
-  const expected = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
-
-  // Timing-safe comparison
-  if (expected.length !== signature.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < expected.length; i++) {
-    mismatch |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
-  }
-  return mismatch === 0;
 }
 
 function json(body: unknown, status = 200): Response {

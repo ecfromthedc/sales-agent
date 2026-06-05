@@ -6,11 +6,17 @@
  *
  * We parse the action, dispatch the right agent, and update the
  * original message to show progress.
+ *
+ * Security: every request is verified against SLACK_SIGNING_SECRET using
+ * Slack's v0 signing scheme + a 5-minute timestamp freshness window. The
+ * signature is computed over the RAW request body, so we read the body once,
+ * verify it, and only then parse the URL-encoded `payload=` field.
  */
 
 import type { Env } from "../lib/env";
 import { getDealById } from "../integrations/notion";
 import { runProposalDrafter } from "../agents/proposal-drafter";
+import { verifySlackRequest } from "../lib/slack-verify";
 
 interface SlackInteractionPayload {
   type: "block_actions";
@@ -34,8 +40,14 @@ export async function handleSlackInteraction(
   env: Env,
   ctx: ExecutionContext,
 ): Promise<Response> {
-  const formData = await req.text();
-  const params = new URLSearchParams(formData);
+  // Slack signs the RAW request body — verify before parsing anything.
+  const rawBody = await req.text();
+  if (!(await verifySlackSignature(req, rawBody, env))) {
+    console.warn("slack_interaction_sig_invalid");
+    return new Response("invalid signature", { status: 401 });
+  }
+
+  const params = new URLSearchParams(rawBody);
   const rawPayload = params.get("payload");
   if (!rawPayload) {
     return new Response("missing payload", { status: 400 });
@@ -147,6 +159,19 @@ function replaceButtonWithStatus(blocks: unknown[] | undefined, status: string):
       };
     }
     return block;
+  });
+}
+
+async function verifySlackSignature(req: Request, rawBody: string, env: Env): Promise<boolean> {
+  if (!env.SLACK_SIGNING_SECRET) {
+    console.warn("slack_signing_secret_missing");
+    return false;
+  }
+  return verifySlackRequest({
+    secret: env.SLACK_SIGNING_SECRET,
+    timestamp: req.headers.get("x-slack-request-timestamp"),
+    signature: req.headers.get("x-slack-signature"),
+    rawBody,
   });
 }
 

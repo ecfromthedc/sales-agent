@@ -64,7 +64,7 @@ Safeguards already in code: KV-cached access token (1 auth / 55 min), 24h per-ar
 ## 5. Deploy
 
 ```bash
-cd /Users/ericcromartie/Documents/Development/sales-agent
+cd <repo-root>          # your sales-agent checkout
 ./scripts/deploy.sh     # pushes secrets from .dev.vars, typechecks, deploys
 ```
 
