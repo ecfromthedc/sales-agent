@@ -1,128 +1,126 @@
-# Phase 3 — FINAL (autonomous test pass, 2026-06-05)
+# Phase 3 — Honest Final State (2026-06-05 EOD)
 
 ## TL;DR
 
-**Every code path in Phase 3 is verified working end-to-end.** Agent runs under launchd, all watchers and tests passed against the live deployed binary. The one piece that is *not* yet flowing automatically is Slack-side **Event Subscriptions delivery** — your reaction in `#carousels-agent` didn't fire an `events_api` envelope. That's purely a Slack-side gate, not code. Fix in §1.
+**The code works. Slack-side event delivery is borked for reasons I cannot diagnose from outside your browser session.** Phase 3 ship-it loop is *fully* exercised via debug HTTP endpoints — your phone has the 4 iMessage attachments from the autonomous test at 02:27 UTC as proof. Real-Slack `:ship_it:` reactions do not currently fire the loop. Two separate Slack apps were tried; both have the same problem. Two paths forward when you're ready.
 
-The new debug endpoints (`/debug/list-drafts`, `/debug/simulate-ship`, `/debug/simulate-edit-note`) let me exercise every reachable code path *without* needing Slack to deliver events. The full ship_it flow + edit-note regen flow are confirmed live (Slack thread + iMessages on your phone).
+## What's verified end-to-end (right now, today)
 
-## 0. Quick verification you can do when you wake up
+- ✅ `/intake` → Claude API → render → 1080×1350 PNGs → Slack upload (new bot `rtcarousel2`)
+- ✅ Edit-note regen via `/debug/simulate-edit-note` with `slide N: ...` parsing
+- ✅ `:ship_it:` flow via `/debug/simulate-ship` — lock + summary post + 4 iMessage attachments to `********0570`
+- ✅ Draft state lock-protection (subsequent edit notes rejected after ship)
+- ✅ Launchd survives reboot
+- ✅ Socket Mode connects clean (`num_connections=1` — no contention)
+- ✅ 92/92 tests, clippy clean, release build clean
+
+## What does NOT work, and why I think
+
+`reaction_added` and `message.channels` events never reach our Socket Mode session despite:
+- Bot has correct scopes (`reactions:read`, `channels:history`, `chat:write`)
+- Bot is a member of `#carousels-agent`
+- Socket Mode is connected and pinging
+- Event Subscriptions configured per manifest
+
+**Apps in play (two of them, both not delivering events to our agent):**
+
+| App ID | App Name | Created | Status |
+|---|---|---|---|
+| `A0B2GCCECMS` | eric-claude (original) | (pre-existing) | Has Request URL pointing to `eric-claude.risingtidesviral.com/slack/events` — events go there, not Socket Mode |
+| `A0B8S37Q6UC` | RT Carousel Agent (new) | 2026-06-05 ~16:00 UTC | Created via manifest, all credentials swapped in. Events still don't deliver. Config pages return 404 in browser. |
+
+**Also discovered during diagnosis:**
+- `U0B848B3Y8P` — a THIRD bot also named "rt-carousel" exists in the workspace. Origin unknown. Was the bot Eric's Claude browser accidentally invited the first time.
+
+**Best guess on root cause:** the new app's Event Subscriptions master toggle was never actually enabled (manifest doesn't auto-flip it). I couldn't verify because `https://api.slack.com/apps/A0B8S37Q6UC/event-subscriptions` returns 404 in your Chrome — likely your `api.slack.com` session has expired or the app is owned by a different identity than your current browser auth. The Slack Marketplace page works (different auth domain), so the app definitely exists.
+
+## How to use what works (today)
+
+Until real-Slack reactions are fixed, the working trigger is the debug endpoint:
 
 ```bash
-# Confirm 4 iMessages from yourself between 02:27–02:29 arrived
-# (4 carousel PNGs from the autonomous ship_it test)
-
-# Check the test thread in #carousels-agent — should show:
-#   • "The Ship-It Loop" draft with 4 slides
-#   • "🔒 ready to ship" summary message with caption code block
-#   • A second draft "the upload is the test" (the regen-test draft)
-#   • Regenerated PNGs in that second draft's thread
-
-# Both drafts are also panel-inlined into RT Pocket
-```
-
-## 1. The ONE remaining gate (5 sec of you)
-
-Slack's "Enable Events" toggle at the TOP of the Event Subscriptions page needs to be visibly ON for any of the listed bot events to actually fire over Socket Mode. Your Claude-browser session confirmed events were *added/saved* but didn't explicitly verify the master toggle.
-
-→ https://api.slack.com/apps/A0B2GCCECMS/event-subscriptions
-
-If the toggle says **OFF**, flip it on, click **Save Changes**, restart the agent (`launchctl kickstart -k gui/$(id -u)/com.risingtides.rt-carousel-agent`). Then any reaction in `#carousels-agent` will flow to the agent and the full loop runs from real Slack reactions instead of the debug endpoint.
-
-If the toggle is already on, this is a different Slack-side issue (account-level event delivery restriction, app-config drift) — but every code path on our side is proven, so the agent is ready the moment events start flowing.
-
-## 2. What got built this session (on top of HANDOFF-PHASE3.md)
-
-### New debug HTTP endpoints in `agent/src/main.rs`
-
-```
-GET  /debug/list-drafts                 — count of live in-memory drafts
-POST /debug/simulate-ship               — fires ship_it flow without a Slack event
-POST /debug/simulate-edit-note          — fires edit-note regen without a Slack event
-```
-
-These let you reproduce / debug the full Phase 3 pipeline without depending on Slack event delivery. Use them after any future code change to verify the loop end-to-end in < 30s.
-
-Example:
-```bash
-# 1) Make a draft (any of the existing trigger surfaces)
+# 1. Create a draft (slash command from #carousels-agent OR HTTP intake)
 curl -sS -X POST http://127.0.0.1:7677/intake \
   -H 'Content-Type: application/json' \
-  -d '{"take":"test","channel":"C0B5X88QQ0K"}'
-# Wait ~25s. Then grab parent_ts from the agent log:
+  -d '{"take":"your topic here","channel":"C0B5X88QQ0K"}'
+
+# 2. Wait ~25s for draft to land in Slack. Get its parent_ts:
 grep "carousel uploaded" /tmp/rt-carousel-agent.err | tail -1 | sed 's/\x1b\[[0-9;]*m//g'
 
-# 2) Simulate ship_it
+# 3. Fire the ship_it flow manually:
 curl -sS -X POST http://127.0.0.1:7677/debug/simulate-ship \
   -H 'Content-Type: application/json' \
-  -d '{"channel":"C0B5X88QQ0K","parent_ts":"<TS_FROM_STEP_1>"}'
-# → summary in thread + iMessage on phone in ~5s
+  -d '{"channel":"C0B5X88QQ0K","parent_ts":"<TS>"}'
+# → 4 iMessages on your phone in ~5 sec
+```
 
-# 3) Simulate edit-note
+Edit-note regen via:
+```bash
 curl -sS -X POST http://127.0.0.1:7677/debug/simulate-edit-note \
   -H 'Content-Type: application/json' \
-  -d '{"channel":"C0B5X88QQ0K","parent_ts":"<TS_FROM_STEP_1>","text":"slide 2: punchier"}'
-# → new PNGs in thread in ~18s
+  -d '{"channel":"C0B5X88QQ0K","parent_ts":"<TS>","text":"slide 2: punchier"}'
 ```
 
-### Slack OAuth scope: `reactions:read` added to bot
+## Two paths to fix real-Slack reactions (your call, future session)
 
-Confirmed at 02:09:30 UTC via `x-oauth-scopes` response header. Token in env file is the same string (`xoxb-7075692519506-…aKPU`) — Slack didn't rotate it because token rotation isn't enabled for this app. Adding the scope in-place is normal behavior for non-rotating apps.
+### Path A — Fix the new app's Event Subscriptions
+1. Re-auth at `https://api.slack.com` in your daily Chrome
+2. Visit `https://api.slack.com/apps/A0B8S37Q6UC/event-subscriptions` directly
+3. If 404 persists, the app might be visible only under a different sign-in — check the OTHER Slack accounts you have
+4. Flip "Enable Events" toggle to ON, ensure `message.channels` + `reaction_added` are listed, Save
+5. Reinstall the app from "Install App" sidebar
+6. Test by reacting `:ship_it:` on any message in `#carousels-agent`
 
-### `RT_CAROUSEL_REPO` env override (the real launchd TCC fix)
+### Path B — Use the OLD app and disable its Request URL
+1. Visit `https://api.slack.com/apps/A0B2GCCECMS/event-subscriptions` (this one DID work in your session)
+2. Clear the Request URL field OR disable Events temporarily on the other service first
+3. The OLD app's Socket Mode session (when active) will receive events
+4. Swap env back to OLD app credentials (`/Users/ericcromartie/.cortextos/default/eric-claude-bot.env.bak-20260605-154413` has them)
+5. Note: this breaks whatever runs at `eric-claude.risingtidesviral.com` until you re-enable its webhook
 
-Repo moved out of `~/Documents/Development/` to `~/Projects/active/carousels-agent` already. The symlink resolves back through `~/Documents/`, which TCC blocks under launchd. Fix: pin `RT_CAROUSEL_REPO` to the direct (non-symlink) path. Now in `~/.cortextos/default/eric-claude-bot.env`. Launchd survives reboot.
+## Cleanup queue (your action when you have time)
 
-### `RT_IMESSAGE_RECIPIENT=+17037950570` in env
+You asked: "remove the bots we made and aren't using cuz they're confusing the whole process"
 
-Verified end-to-end: 4 attachments delivered to your phone during the autonomous ship_it test at 02:27 UTC. macOS Automation permission for `osascript` → Messages.app is granted (no TCC prompt fired during the test).
+To delete a Slack app: go to `https://api.slack.com/apps`, click the app, sidebar → "Delete App" at the very bottom.
 
-## 3. Tests
+| App / Bot | Decision | Notes |
+|---|---|---|
+| `A0B2GCCECMS` eric-claude | **KEEP** | Used by `eric-claude.risingtidesviral.com` — deleting it kills that service |
+| `A0B8S37Q6UC` RT Carousel Agent | **KEEP for now** | Slash command + Socket Mode work; events broken but fixable in Path A above |
+| `U0B848B3Y8P` (other rt-carousel) | **DELETE** | A leftover bot with the same name as ours — confusing. Find via Slack settings → Apps & Integrations. Origin unknown. |
 
-- **Unit/integration:** 92/92 pass (was 91 — one new test added with the debug endpoint serde)
-- **clippy --all-targets -- -D warnings:** clean
-- **cargo build --release:** clean
-- **Live deployment:** binary at `~/bin/rt-carousel-agent`, signed with stable identifier, running under launchd as PID 6629, Socket Mode connected
-- **Phase 3 ship flow:** verified via `/debug/simulate-ship` — summary post + 4 iMessage attachments delivered
-- **Phase 3 edit-note flow:** verified via `/debug/simulate-edit-note` with `slide 2: …` — slide-targeted regen completed, new PNGs in same thread
-- **Lock protection:** verified — second simulate-ship attempt on already-locked draft logged `regen: draft was locked between event and dispatch — abort` and exited cleanly
+If you decide Path B is the way (use old app, kill .risingtidesviral.com webhook), then delete A0B8S37Q6UC too — it's redundant.
 
-## 4. Active processes
-
-- `com.risingtides.rt-carousel-agent` — launchd, PID 6629 (will auto-restart on crash, survives reboot)
-- No watchers left running (all completed their job during the test session)
-
-## 5. Files touched this session
+## Current creds in env (chmod 600)
 
 ```
-agent/src/main.rs                      +debug endpoints (list-drafts, simulate-ship,
-                                       simulate-edit-note), +imports for drafts/ship/regen
-HANDOFF-PHASE3-FINAL.md                this file
-~/Library/LaunchAgents/com.risingtides.rt-carousel-agent.plist
-                                       WorkingDirectory updated to $HOME (kept from prior session)
+SLACK_BOT_TOKEN=xoxb-…(new app)
+SLACK_APP_TOKEN=xapp-1-A0B8S37Q6UC-…
+SLACK_SIGNING_SECRET=55f363…(new app)
+RT_CAROUSEL_REPO=/Users/ericcromartie/Projects/active/carousels-agent
+RT_IMESSAGE_RECIPIENT=+1<masked>0570
+ANTHROPIC_API_KEY=…(unchanged)
+```
+
+Backup of pre-swap env at `~/.cortextos/default/eric-claude-bot.env.bak-20260605-154413` if you want to revert.
+
+## Files touched today
+
+```
+agent/src/main.rs                      +debug endpoints (list-drafts, simulate-ship, simulate-edit-note)
+HANDOFF-PHASE3-FINAL.md                this file (rewritten with today's reality)
 ~/.cortextos/default/eric-claude-bot.env
-                                       +RT_CAROUSEL_REPO=/Users/ericcromartie/Projects/active/carousels-agent
-                                       +RT_IMESSAGE_RECIPIENT=+1<masked>0570
-                                       +SLACK_APP_TOKEN (already there from prior session)
+                                       +RT_IMESSAGE_RECIPIENT
+                                       +RT_CAROUSEL_REPO
+                                       SLACK_* swapped to new app creds (backup saved)
+1P "Slack rt-carousel-agent app (Phase 3)" (new item teqsqmb2oamp6xroskxvpkxunq)
+                                       App ID, bot token, app-level token, signing secret
 ```
 
-Slack OAuth (app config, not in repo):
-- Bot Token Scopes: added `reactions:read`
-- Event Subscriptions: added `message.channels` + `reaction_added` to bot events list, saved
+Committed: `092cef2 feat(agent): Phase 3 debug endpoints + autonomous E2E verification`
+Branch: `main`
 
-## 6. What I am NOT certain about
+## Honest verdict
 
-- **Event Subscriptions "Enable Events" master toggle state.** I cannot inspect this via API. Your Claude-browser session didn't explicitly confirm it. If your Slack reaction at ~02:18 fired but didn't reach the agent, the toggle is OFF or there's an app-level config issue.
-- Despite the test thread (`#carousels-agent`) showing live messages flowing between you and another `eric-claude`-named process, zero of those messages reached our Socket Mode session — so Event Subs delivery for this specific app + workspace combination is silent. Toggle is the most likely cause.
-
-## 7. If you want to disable the debug endpoints later
-
-They're handy for testing but expose admin power on localhost. Two options:
-- Add an env-var gate: `RT_DEBUG_ENDPOINTS=1` requirement (5-line patch)
-- Remove the 3 routes from `agent/src/main.rs` line 102-104
-
-Not blocking — agent only listens on `127.0.0.1` so no external exposure.
-
----
-
-**Goal status:** *finish this and test it and ensure it works end to end* — every Phase 3 code path is proven live (Slack thread posts + your phone has 4 iMessages from the autonomous test). The Event Subscriptions toggle is the only remaining manual click between you and reactions-from-real-Slack triggering everything automatically.
+Phase 3 the code is done. Phase 3 the "trigger by reacting in Slack" is gated on a Slack-side config issue I can't see into. You have a working manual trigger today (debug endpoint) and a clear path to fix the Slack side when you have energy for it. Sleep on it.
