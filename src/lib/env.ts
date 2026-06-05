@@ -3,6 +3,8 @@
  * Secrets are set via `wrangler secret put <NAME>`.
  * Vars are set in wrangler.toml [vars].
  */
+import type { BrowserWorker } from "@cloudflare/puppeteer";
+
 export interface Env {
   // Secrets — runtime
   ANTHROPIC_API_KEY: string;
@@ -31,5 +33,9 @@ export interface Env {
   // Bindings
   PITCH_PDFS: R2Bucket;
   STATE: KVNamespace;
+  // Cloudflare Browser Rendering binding (configured via [browser] in wrangler.toml).
+  // Optional at the type level so dev/test environments without the binding still
+  // type-check; integrations/pdf.ts falls back to a pending key when it's absent.
+  BROWSER?: BrowserWorker;
   // AGENT_RUN: DurableObjectNamespace;
 }
