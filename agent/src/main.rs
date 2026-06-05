@@ -30,8 +30,11 @@ use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 use uuid::Uuid;
 
 use rt_carousel_agent::config::Config;
+use rt_carousel_agent::drafts;
 use rt_carousel_agent::generator::Generator;
 use rt_carousel_agent::pipeline;
+use rt_carousel_agent::regen;
+use rt_carousel_agent::ship;
 use rt_carousel_agent::slack::{SlashCommand, verify_slack_signature};
 use rt_carousel_agent::socket_mode;
 use rt_carousel_agent::sources::SourceIndex;
@@ -101,6 +104,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/intake", post(intake_handler))
         .route("/slack/slash-command", post(slash_command_handler))
         .route("/alexandria-spawn", post(alexandria_spawn_handler))
+        .route("/debug/list-drafts", get(debug_list_drafts))
+        .route("/debug/simulate-ship", post(debug_simulate_ship))
+        .route("/debug/simulate-edit-note", post(debug_simulate_edit_note))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
@@ -372,6 +378,99 @@ async fn alexandria_spawn_handler(
         "note_path": resolved.display().to_string(),
         "take": take,
         "message": "alexandria spawn accepted — draft posting to Slack shortly",
+    })))
+}
+
+/// Body for /debug/simulate-ship — simulates a `:ship_it:` reaction without
+/// needing Slack to actually deliver an events_api envelope. Used to verify
+/// the ship flow end-to-end when Event Subscriptions delivery is gated on a
+/// pending Slack UI toggle.
+#[derive(Debug, Deserialize)]
+struct DebugSimulateShipRequest {
+    channel: String,
+    parent_ts: String,
+}
+
+/// Body for /debug/simulate-edit-note — simulates a thread reply edit note.
+#[derive(Debug, Deserialize)]
+struct DebugSimulateEditNoteRequest {
+    channel: String,
+    parent_ts: String,
+    text: String,
+}
+
+/// GET /debug/list-drafts — lists live (in-memory) drafts so you can find a
+/// (channel, parent_ts) pair to pass into the simulators.
+async fn debug_list_drafts() -> Json<serde_json::Value> {
+    let store = drafts::store();
+    Json(serde_json::json!({
+        "live_draft_count": store.len(),
+        "note": "drafts are keyed by (channel, parent_ts); use /debug/simulate-ship or /debug/simulate-edit-note to exercise the post-draft handlers without a Slack event",
+    }))
+}
+
+/// POST /debug/simulate-ship — fires the `:ship_it:` reaction flow against an
+/// existing draft. Lock → summary post → iMessage send.
+async fn debug_simulate_ship(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<DebugSimulateShipRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    if drafts::store().get(&req.channel, &req.parent_ts).is_none() {
+        return Err((
+            StatusCode::NOT_FOUND,
+            format!(
+                "no live draft at (channel={}, parent_ts={}). Use GET /debug/list-drafts and POST /intake to create one first.",
+                req.channel, req.parent_ts
+            ),
+        ));
+    }
+    let cfg = Arc::clone(&state.cfg);
+    let sources = Arc::clone(&state.sources);
+    let channel = req.channel.clone();
+    let parent_ts = req.parent_ts.clone();
+    tokio::spawn(async move {
+        if let Err(e) = ship::run_ship_flow(cfg, sources, channel, parent_ts).await {
+            warn!(error = %e, "debug ship flow failed");
+        }
+    });
+    Ok(Json(serde_json::json!({
+        "ok": true,
+        "message": "ship flow dispatched in background",
+        "channel": req.channel,
+        "parent_ts": req.parent_ts,
+    })))
+}
+
+/// POST /debug/simulate-edit-note — fires the edit-note regen flow.
+async fn debug_simulate_edit_note(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<DebugSimulateEditNoteRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    if drafts::store().get(&req.channel, &req.parent_ts).is_none() {
+        return Err((
+            StatusCode::NOT_FOUND,
+            format!(
+                "no live draft at (channel={}, parent_ts={})",
+                req.channel, req.parent_ts
+            ),
+        ));
+    }
+    let cfg = Arc::clone(&state.cfg);
+    let sources = Arc::clone(&state.sources);
+    let channel = req.channel.clone();
+    let parent_ts = req.parent_ts.clone();
+    let text = req.text.clone();
+    tokio::spawn(async move {
+        if let Err(e) = regen::apply_edit_note(cfg, sources, channel, parent_ts, text).await {
+            warn!(error = %e, "debug edit-note regen failed");
+        }
+    });
+    Ok(Json(serde_json::json!({
+        "ok": true,
+        "message": "edit-note regen dispatched in background",
+        "channel": req.channel,
+        "parent_ts": req.parent_ts,
+        "text_len": req.text.len(),
     })))
 }
 
