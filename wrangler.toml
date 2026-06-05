@@ -13,9 +13,12 @@ crons = ["*/5 * * * *"]
 NOTION_DEALS_DB_ID = "3611465b-b829-81de-a237-cf6516fe8fcf"
 NOTION_TRANSCRIPTS_DB_ID = "3611465b-b829-81a0-b6a0-cc55e6ed784c"
 NOTION_PITCH_ARTIFACTS_DB_ID = "3611465b-b829-8174-875c-c9a6db1540cd"
-MEET_RECORDINGS_FOLDER_ID = "19krQR2fbafw3h0uxLF7SvEoh2mgW0Sy8"        # set after Eric grabs the Drive folder ID
+MEET_RECORDINGS_FOLDER_ID = "19krQR2fbafw3h0uxLF7SvEoh2mgW0Sy8"        # primary Meet Recordings folder
 SLACK_BRIEF_CHANNEL_ID = "C0B47J6FZ47"
-# SLACK_PROPOSALS_CHANNEL_ID = ""   # optional — post-call pitch notices; notifySlack no-ops if unset
+SLACK_PROPOSALS_CHANNEL_ID = "C0B670L4VRS"   # proposal pipeline notices; notifySlack no-ops if unset
+# Public base URL of this Worker — used to build proposal live links (/p/:dealId).
+# Set to the deployed workers.dev subdomain or a custom domain after first deploy.
+PUBLIC_BASE_URL = "https://rt-sales-call-agent.risingtidesent.workers.dev"
 
 # Required secrets (set via `wrangler secret put`):
 #   ANTHROPIC_API_KEY

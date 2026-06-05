@@ -93,12 +93,22 @@ const PRE_CALL_BRIEF_SYSTEM = `You write pre-call briefs for Eric Cromartie, fou
 ## Brief structure:
 
 **ARTIST** — Name, label, genre, monthly listeners, popularity score. One line on where they sit in the market. Done.
+- For popularity, prefer enrichment.chartmetric.cmScore (0–100 cross-platform Chartmetric score) and cmRank (global rank) when present — "Chartmetric 82, ranked #1,400 globally" is the sharpest read on momentum. Fall back to enrichment.songstats Spotify popularity if Chartmetric is missing.
 
 **NUMBERS** — Stat block, not prose:
+- Chartmetric score (0–100) + global rank, if present
 - Listeners / Popularity / Followers / Streams
 - Playlists (current + editorial)
 - Social: IG, TikTok, YouTube
 - Top 3 tracks: name | popularity | streams. Popularity 70+ = hot, push as TikTok sound. High streams + low popularity = catalog re-activation play.
+
+**LINKS** — clickable profile URLs for quick assessment. Pull from enrichment.songstats.platformLinks and the Spotify link from the Calendly Q&A. Format as a compact list:
+- Spotify: [url]
+- Instagram: [url]
+- TikTok: [url]
+- YouTube: [url]
+- (any other platforms in platformLinks)
+Only include platforms where a URL exists in the enrichment data. Skip platforms with no URL — don't guess or construct URLs.
 
 **RT HISTORY** — Check enrichment.crm first (exactMatches = this artist, labelMatches = same label or related artists). For each hit: artist, song, stage, spend, label. Then check enrichment.gmail for email threads. If CRM has matches, lead with them — "RT ran X campaign for $Y" is the strongest thing Eric can say on the call. Only say "Cold" if both are empty.
 
@@ -123,6 +133,54 @@ export interface PitchOutput {
   /** Canonical, ordered deck sections (see lib/pitch-sections.ts). Always the
    *  full set in template order; missing sections come back with an empty body. */
   sections: FilledPitchSection[];
+}
+
+export interface ProposalOutput {
+  prd: {
+    artist: {
+      name: string;
+      spotifyUrl: string | null;
+      imageUrl: string | null;
+      genre: string;
+      monthlyListeners: string | null;
+      label: string | null;
+      management: string | null;
+    };
+    headline: string;
+    subheadline: string;
+    whyNow: string;
+    campaignStrategy: {
+      platforms: string[];
+      approach: string;
+      creatorTypes: string[];
+      contentFormats: string[];
+    };
+    budgetOptions: Array<{
+      name: string;
+      amount: string;
+      scope: string;
+      creatorCount: string;
+    }>;
+    creatorRoster: {
+      targetCount: string;
+      niches: string[];
+      specificNames: string[];
+      combinedReachTarget: string | null;
+    };
+    timeline: {
+      releaseDate: string | null;
+      campaignWindow: string | null;
+      milestones: string[];
+    };
+    beforeLaunch: string[];
+    proofPoints: string[];
+  };
+  followUpEmail: string;
+  internalNotes: string[];
+  assumptions: string[];
+  missingData: string[];
+  sourceClaims: string[];
+  quotedTranscriptLines: string[];
 }
 
 export async function composePitch(input: {
@@ -156,6 +214,52 @@ export async function composePitch(input: {
   return parsed;
 }
 
+// ---------- Proposal draft ----------
+export async function composeProposal(input: {
+  deal: {
+    id: string;
+    inviteeEmail: string;
+    inviteeName: string;
+    eventStartsAt: string;
+    eventUri: string;
+    status: string;
+  };
+  transcript: string;
+  preCallBrief?: string;
+  priorPitch?: PitchOutput;
+  // Refine mode: revise an existing proposal per Eric's Slack instruction.
+  priorProposal?: ProposalOutput;
+  refinement?: string;
+}, env: Env): Promise<ProposalOutput> {
+  const refineBlock = input.refinement
+    ? `\n\n--- REFINEMENT REQUEST ---\nEric reviewed the proposal below and wants this change:\n"${input.refinement}"\n\nReturn the FULL updated JSON object. Apply the requested change. Keep everything else intact unless the change requires otherwise. Still honor every evidence rule — never fabricate to satisfy the edit; if the edit asks for data you don't have, put it in missingData.\n\nCurrent proposal JSON:\n${JSON.stringify(input.priorProposal ?? {}, null, 2)}`
+    : "";
+
+  const res = await callClaude({
+    model: MODEL_PITCH,
+    max_tokens: 12000,
+    thinking: { type: "enabled", budget_tokens: 8000 },
+    system: PROPOSAL_SYSTEM,
+    messages: [
+      {
+        role: "user",
+        content: `Deal:\n${JSON.stringify(input.deal, null, 2)}\n\nPre-call brief, if available:\n${input.preCallBrief ?? "(none)"}\n\nTranscript:\n${input.transcript}\n\nPrior pitch output, if any:\n${input.priorPitch ? JSON.stringify(input.priorPitch, null, 2) : "(none)"}${refineBlock}`,
+      },
+    ],
+  }, env);
+
+  const text = extractText(res);
+  const parsed = extractJson<ProposalOutput>(text);
+  if (!parsed) throw new Error("proposal_compose_unparseable");
+  if (!parsed.prd?.artist?.name || !parsed.prd?.headline || !parsed.followUpEmail) {
+    throw new Error("proposal_missing_required_fields");
+  }
+  if (!parsed.quotedTranscriptLines || parsed.quotedTranscriptLines.length < 3) {
+    throw new Error("proposal_must_quote_three_lines");
+  }
+  return parsed;
+}
+
 const POST_CALL_PITCH_SYSTEM = `You are Rising Tides' post-call pitch composer.
 
 You will be given a sales call transcript. Produce a JSON object with this exact shape:
@@ -180,6 +284,92 @@ Hard rules:
 - The email body must quote at least 3 specific things the prospect said.
 - Never invent numbers, deals, or quotes.
 - Output ONLY the JSON object, no preamble, no code fence.
+`;
+
+const PROPOSAL_SYSTEM = `You are Rising Tides' PRD composer. You do NOT build the proposal itself. You build the structured brief that feeds the proposals agent — a separate system that owns the brand kit, design system, and HTML rendering.
+
+Your job: extract every decision-relevant detail from the call transcript and enrichment data, then package it into a clean PRD that the proposals agent can execute against without needing any additional context.
+
+Think of this like a creative brief for a designer. The proposals agent will use your PRD to build a premium, Shaboozey-quality pitch deck with the RT brand system (Swiss Grid, dark editorial, curated creator roster cards, budget tier panels). If your PRD is vague, the proposal will be generic. If your PRD is specific, the proposal will close deals.
+
+Return ONLY valid JSON matching this exact shape:
+
+{
+  "prd": {
+    "artist": {
+      "name": "Artist Name",
+      "spotifyUrl": "https://open.spotify.com/artist/...",
+      "imageUrl": null,
+      "genre": "country / pop / hip-hop / etc",
+      "monthlyListeners": "800K" or null,
+      "label": "Label Name" or null,
+      "management": "Manager Name / Company" or null
+    },
+    "headline": "One punchy line that frames the proposal angle. E.g. 'Plant Cowgirl in country culture.' or 'Make Gemini the summer anthem.' This becomes the hero text.",
+    "subheadline": "One sentence expanding on the headline — the editorial thesis.",
+    "whyNow": "Why this campaign, this song, this moment. Reference specific timing from the call (release date, TikTok momentum, cultural window).",
+    "campaignStrategy": {
+      "platforms": ["TikTok", "Instagram"],
+      "approach": "What the campaign actually does — UGC seeding, sound campaigns, creator placements, content strategy coaching, etc. Be specific to what was discussed.",
+      "creatorTypes": ["face creators", "theme pages", "country-lifestyle", etc],
+      "contentFormats": ["performance", "transition", "digital postcard", etc]
+    },
+    "budgetOptions": [
+      {
+        "name": "Focused Seed",
+        "amount": "$5,000",
+        "scope": "What this buys — creator count, post count, expected impressions",
+        "creatorCount": "50-80 posts"
+      }
+    ],
+    "creatorRoster": {
+      "targetCount": "50-80 creators",
+      "niches": ["country-lifestyle", "truck-talk", "coffee-morning"],
+      "specificNames": ["any creators mentioned on the call"],
+      "combinedReachTarget": "2M+ impressions" or null
+    },
+    "timeline": {
+      "releaseDate": "2026-07-15" or null,
+      "campaignWindow": "2 weeks post-release" or null,
+      "milestones": ["Send songs for review", "Finalize budget", "Campaign launch day-of-release"]
+    },
+    "beforeLaunch": [
+      "Audio link / approved snippets",
+      "Confirmed release date",
+      "Platform split decision (TikTok-only or TikTok + IG)",
+      "Approval window for creator selection"
+    ],
+    "proofPoints": [
+      "Specific reasons RT is the right fit for this prospect — reference past work, shared connections, genre expertise. Only use facts from the enrichment or transcript."
+    ]
+  },
+  "followUpEmail": "Draft email in Eric's voice...",
+  "internalNotes": ["Things Eric should know but don't go in the proposal"],
+  "assumptions": ["Things you're assuming because they weren't explicitly stated"],
+  "missingData": ["Critical info that wasn't discussed — the proposals agent needs to know what's missing so it doesn't fabricate"],
+  "sourceClaims": ["Every number, name, or fact with where it came from: 'monthly listeners 800K — from enrichment.spotify' or 'budget $5K — prospect stated at 24:19'"],
+  "quotedTranscriptLines": ["Exact quotes from the transcript — at least 3"]
+}
+
+PRD rules:
+- Every field in prd.* must be filled from the transcript or enrichment data. If unknown, use null — never guess.
+- budgetOptions must reflect what was actually discussed on the call. If no budget was discussed, use a single option with the amount from assumptions and flag it in assumptions[].
+- beforeLaunch items should be specific to this deal, not generic checklists.
+- proofPoints are for the proposals agent to use as credibility markers — past RT clients in similar genres, shared connections, specific expertise.
+- headline should be 3-8 words, punchy, specific to this artist/song. NOT "Rising Tides Proposal for [Artist]."
+
+Evidence rules:
+- Quote at least 3 exact lines from the transcript in quotedTranscriptLines.
+- Every numerical claim must appear in sourceClaims with provenance.
+- Never invent metrics, case studies, budgets, timelines, names, or quotes.
+- If data is missing, say what's missing in missingData. The proposals agent will mark it as TBD rather than fabricate.
+
+followUpEmail voice (Eric Cromartie):
+- Short, warm, direct. "Hey [First Name]," opening.
+- Reference something specific from the call — a song, a goal, a moment.
+- 2-5 sentences. Mention that the proposal is attached/linked.
+- No corporate language: no landscape, leverage, synergize, game-changer, elevate, ecosystem.
+- This is a draft for Eric to review, not auto-sent.
 `;
 
 function extractJson<T>(text: string): T | null {

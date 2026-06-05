@@ -45,6 +45,7 @@ export interface Deal {
   startedAt?: string;
   endedAt?: string;
   transcript?: string;
+  brief?: string;
 }
 
 export interface DealUpsertInput {
@@ -87,6 +88,19 @@ function bullet(text: string): any {
     type: "bulleted_list_item",
     bulleted_list_item: { rich_text: [{ type: "text", text: { content: text.slice(0, 1900) } }] },
   };
+}
+
+function codeBlocks(text: string, language = "html"): any[] {
+  const chunks: string[] = [];
+  for (let i = 0; i < text.length; i += 1800) chunks.push(text.slice(i, i + 1800));
+  return chunks.map((chunk) => ({
+    object: "block",
+    type: "code",
+    code: {
+      rich_text: [{ type: "text", text: { content: chunk } }],
+      language,
+    },
+  }));
 }
 
 // ---------- Deals ----------
@@ -155,6 +169,32 @@ export async function getDealById(dealId: string, env: Env): Promise<Deal | null
   const eventUri: string = props["Event URI"]?.url ?? "";
   const status: Deal["status"] = (props["Status"]?.select?.name ?? "Booked") as Deal["status"];
 
+  // Deal page body: pre-call brief lives in child blocks appended by upsertDeal.
+  let brief: string | undefined;
+  try {
+    const dealBlocks = await notionFetch(env, "GET", `/blocks/${dealId}/children?page_size=100`);
+    const paragraphs: string[] = [];
+    let inBrief = false;
+    for (const block of dealBlocks.results ?? []) {
+      if (block.type === "heading_2") {
+        const text: string = (block.heading_2?.rich_text ?? [])
+          .map((rt: any) => rt.plain_text ?? "")
+          .join("");
+        inBrief = /pre-call brief/i.test(text);
+        continue;
+      }
+      if (inBrief && block.type === "paragraph") {
+        const text: string = (block.paragraph?.rich_text ?? [])
+          .map((rt: any) => rt.plain_text ?? "")
+          .join("");
+        if (text) paragraphs.push(text);
+      }
+    }
+    if (paragraphs.length > 0) brief = paragraphs.join("\n\n");
+  } catch {
+    // Brief lookup is best-effort.
+  }
+
   // Transcripts DB: query for rows whose Deal relation points to this page.
   let transcript: string | undefined;
   let startedAt: string | undefined;
@@ -211,6 +251,7 @@ export async function getDealById(dealId: string, env: Env): Promise<Deal | null
     startedAt,
     endedAt,
     transcript,
+    brief,
   };
 }
 
@@ -304,6 +345,114 @@ export async function attachPitchArtifacts(input: {
   });
 
   // Flip deal status: -> Pitched
+  await notionFetch(env, "PATCH", `/pages/${input.dealId}`, {
+    properties: { Status: { select: { name: "Pitched" } } },
+  });
+}
+
+export async function attachProposalArtifact(input: {
+  dealId: string;
+  pdfKey: string;
+  proposalUrl?: string;
+  prd: Record<string, unknown>;
+  followUpEmail: string;
+  internalNotes: string[];
+  assumptions: string[];
+  missingData: string[];
+  sourceClaims: string[];
+  transcriptQuoted: string[];
+}, env: Env): Promise<void> {
+  const prd = input.prd as any;
+  const artistName = prd?.artist?.name ?? "Unknown";
+
+  const properties: Record<string, any> = {
+    Name: { title: [{ text: { content: `PRD — ${artistName} — ${new Date().toISOString().slice(0, 10)}` } }] },
+    Deal: { relation: [{ id: input.dealId }] },
+    "PDF Key": { rich_text: [{ text: { content: input.pdfKey } }] },
+    Status: { select: { name: "Draft" } },
+  };
+
+  const children: any[] = [
+    heading("Proposal PRD", 2),
+
+    ...(input.proposalUrl ? splitParagraphs(`**Live proposal:** ${input.proposalUrl}`) : []),
+
+    heading("Artist", 3),
+    ...splitParagraphs(
+      `**${artistName}** — ${prd?.artist?.genre ?? "genre TBD"}\n\n` +
+      `Spotify: ${prd?.artist?.spotifyUrl ?? "not provided"}\n` +
+      `Monthly listeners: ${prd?.artist?.monthlyListeners ?? "unknown"}\n` +
+      `Label: ${prd?.artist?.label ?? "unknown"} | Management: ${prd?.artist?.management ?? "unknown"}`
+    ),
+
+    heading("Headline", 3),
+    ...splitParagraphs(`${prd?.headline ?? ""}\n\n${prd?.subheadline ?? ""}`),
+
+    heading("Why Now", 3),
+    ...splitParagraphs(prd?.whyNow ?? "Not specified"),
+
+    heading("Campaign Strategy", 3),
+    ...splitParagraphs(
+      `Platforms: ${prd?.campaignStrategy?.platforms?.join(", ") ?? "TBD"}\n\n` +
+      `Approach: ${prd?.campaignStrategy?.approach ?? "TBD"}\n\n` +
+      `Creator types: ${prd?.campaignStrategy?.creatorTypes?.join(", ") ?? "TBD"}\n\n` +
+      `Content formats: ${prd?.campaignStrategy?.contentFormats?.join(", ") ?? "TBD"}`
+    ),
+
+    heading("Budget Options", 3),
+    ...((prd?.budgetOptions ?? []) as any[]).map((opt: any) =>
+      bullet(`${opt.name}: ${opt.amount} — ${opt.scope} (${opt.creatorCount})`)
+    ),
+
+    heading("Creator Roster Requirements", 3),
+    ...splitParagraphs(
+      `Target: ${prd?.creatorRoster?.targetCount ?? "TBD"}\n\n` +
+      `Niches: ${prd?.creatorRoster?.niches?.join(", ") ?? "TBD"}\n\n` +
+      `Specific names: ${prd?.creatorRoster?.specificNames?.length ? prd.creatorRoster.specificNames.join(", ") : "none mentioned"}\n\n` +
+      `Reach target: ${prd?.creatorRoster?.combinedReachTarget ?? "TBD"}`
+    ),
+
+    heading("Timeline", 3),
+    ...splitParagraphs(
+      `Release date: ${prd?.timeline?.releaseDate ?? "TBD"}\n\n` +
+      `Campaign window: ${prd?.timeline?.campaignWindow ?? "TBD"}`
+    ),
+    ...(prd?.timeline?.milestones ?? []).map((m: string) => bullet(m)),
+
+    heading("Before Launch (prospect must provide)", 3),
+    ...(prd?.beforeLaunch ?? []).map((item: string) => bullet(item)),
+
+    heading("Proof Points", 3),
+    ...(prd?.proofPoints ?? []).map((p: string) => bullet(p)),
+
+    heading("PRD JSON (machine-readable)", 3),
+    ...codeBlocks(JSON.stringify(input.prd, null, 2), "json"),
+
+    heading("Follow-Up Email Draft", 3),
+    ...splitParagraphs(input.followUpEmail),
+
+    heading("Internal Notes", 3),
+    ...(input.internalNotes.length ? input.internalNotes.map(bullet) : [bullet("None")]),
+
+    heading("Assumptions", 3),
+    ...(input.assumptions.length ? input.assumptions.map(bullet) : [bullet("None")]),
+
+    heading("Missing Data", 3),
+    ...(input.missingData.length ? input.missingData.map(bullet) : [bullet("None")]),
+
+    heading("Source Claims", 3),
+    ...(input.sourceClaims.length ? input.sourceClaims.map(bullet) : [bullet("None")]),
+
+    heading("Transcript Lines Quoted", 3),
+    ...input.transcriptQuoted.map((q: string) => bullet(`"${q}"`)),
+  ];
+
+  await notionFetch(env, "POST", "/pages", {
+    parent: { database_id: env.NOTION_PITCH_ARTIFACTS_DB_ID },
+    properties,
+    children,
+  });
+
   await notionFetch(env, "PATCH", `/pages/${input.dealId}`, {
     properties: { Status: { select: { name: "Pitched" } } },
   });

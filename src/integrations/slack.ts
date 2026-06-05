@@ -216,6 +216,27 @@ export function buildPitchMessage(input: PitchMessageInput): SlackMessage {
           },
         ],
       },
+      {
+        // Entry point for the proposal pipeline: clicking "Draft Proposal"
+        // POSTs to /slack/interactions with action_id "draft_proposal" and the
+        // deal id as the value, which kicks off runProposalDrafter.
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: { type: "plain_text", text: "Draft Proposal" },
+            style: "primary",
+            action_id: "draft_proposal",
+            value: input.dealId,
+          },
+          {
+            type: "button",
+            text: { type: "plain_text", text: "Open in Notion" },
+            url: notionUrl(input.dealId),
+            action_id: "open_notion",
+          },
+        ],
+      },
     ],
   };
 }

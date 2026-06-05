@@ -20,6 +20,10 @@ export interface Env {
   TIDES_TRACKER_BASE_URL?: string;       // optional; deprecated Tides Tracker host (crm-lookup is canonical)
   TEST_AUTH_KEY: string;
   RAPIDAPI_KEY: string;
+  CHARTMETRIC_REFRESH_TOKEN?: string;    // optional; long-lived, exchanged for 1h access tokens (no-ops if unset)
+  FIREFLIES_API_KEY?: string;            // optional; fetches transcripts from Fireflies (no-ops if unset)
+  FIREFLIES_WEBHOOK_SECRET?: string;     // optional; verifies Fireflies webhook signatures (skips verify if unset)
+  SLACK_SIGNING_SECRET?: string;         // optional; verifies Slack Events API requests (rejects if unset)
 
   // Vars — runtime config
   NOTION_DEALS_DB_ID: string;
@@ -29,6 +33,7 @@ export interface Env {
   SLACK_BOT_TOKEN: string;
   SLACK_BRIEF_CHANNEL_ID: string;
   SLACK_PROPOSALS_CHANNEL_ID?: string;   // optional; post-call pitch notices (no-ops if unset)
+  PUBLIC_BASE_URL?: string;              // optional; e.g. https://rt-sales-call-agent.<sub>.workers.dev — for proposal live links
 
   // Bindings
   PITCH_PDFS: R2Bucket;
