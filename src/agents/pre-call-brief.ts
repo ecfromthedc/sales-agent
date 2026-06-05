@@ -16,8 +16,9 @@ import type { Env } from "../lib/env";
 import { enrichFromSpotify } from "../integrations/spotify";
 import { enrichFromSongstats } from "../integrations/songstats";
 import { searchGmailHistory } from "../integrations/gmail";
-import { lookupCRM } from "../integrations/crm-lookup";
+import { lookupCRM, campaignToComparable } from "../integrations/crm-lookup";
 import { upsertDeal, type DealUpsertInput } from "../integrations/notion";
+import { rankComparables, type ProspectSignal } from "../lib/comparables";
 import { composeBrief } from "../lib/anthropic";
 import { recordRun, recordError } from "../lib/run-state";
 import { retry } from "../lib/retry";
@@ -92,11 +93,42 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       gmailErr: gmail.status === "rejected" ? (gmail.reason as Error)?.message : undefined,
     });
 
+    // Comparable-client matching: rank RT's past clients most-similar-first so
+    // the brief can surface relevant proof ("we ran a campaign for an artist
+    // just like you"). Reuses the CRM records already fetched above — no extra
+    // network path. Candidates are same-lane by construction (artist/label/
+    // related-artist matched); we rank them by genre/tier/recency.
+    const spotifyData = spotify.status === "fulfilled" ? spotify.value : null;
+    const prospectSignal: ProspectSignal = {
+      genres: songstatsData?.genres ?? spotifyData?.genres ?? [],
+      audience:
+        songstatsData?.spotify.monthlyListeners ??
+        songstatsData?.spotify.followers ??
+        spotifyData?.followers ??
+        null,
+    };
+    const comparableCandidates = [
+      ...crmLookup.exactMatches,
+      ...crmLookup.labelMatches,
+    ].map(campaignToComparable);
+    const comparables = rankComparables(
+      prospectSignal,
+      comparableCandidates,
+      new Date(),
+      3,
+    );
+    console.log("pre_call_brief_step", {
+      step: "comparables_ranked",
+      candidates: comparableCandidates.length,
+      top: comparables.map((c) => ({ name: c.candidate.artistName, score: +c.score.toFixed(3) })),
+    });
+
     const enrichment = {
-      spotify: spotify.status === "fulfilled" ? spotify.value : null,
+      spotify: spotifyData,
       songstats: songstatsData,
       gmail: gmail.status === "fulfilled" ? gmail.value : null,
       crm: crmLookup,
+      comparables,
       failures: [spotify, songstats, gmail]
         .filter((r) => r.status === "rejected")
         .map((r) => (r as PromiseRejectedResult).reason?.message ?? "unknown"),
