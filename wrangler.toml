@@ -1,0 +1,19 @@
+name = "rt-henry"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+
+[triggers]
+crons = ["0 8 * * *", "0 9 * * 1", "0 */2 * * *"]
+# Daily at 8am UTC: release scan
+# Weekly Monday 9am UTC: gap analysis
+# Every 2 hours: inbox cleaner
+
+[vars]
+LEADS_DB_ID = "f43f51d951f844348a1dbf36a766af73"
+LABELS_DB_ID = "b8d32ee46cba442187cb48c8bc437b61"
+ARTISTS_DB_ID = "75a81752c5b24b3ea5c1fcba17082e17"
+OUTREACH_LOG_DB_ID = "ffa3667652874e888aa0fda1f2f1e2ca"
+
+[[kv_namespaces]]
+binding = "STATE"
+id = ""
