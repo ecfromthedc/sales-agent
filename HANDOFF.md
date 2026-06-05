@@ -183,8 +183,16 @@ All four are **single sentences**, **provocative**, and **read like a magazine c
 
 This is the playbook. Follow it exactly.
 
+### Step 0: Run the Context Intake questionnaire (MANDATORY — do not skip)
+
+Before anything else, run **[CONTEXT-INTAKE.md](CONTEXT-INTAKE.md)**. Ask Eric the questions via `AskUserQuestion`, batched. Do **not** write a single line of Hook/Build/Payoff/CTA until Block A (the resonant message) and Block B (the proof + where the knowledge lives) are fully answered.
+
+A pasted topic with no context is the *trigger* to run intake, not permission to skip it. If a claim has no real source, it gets cut or made qualitative — never invented. Paste the filled-intake block alongside the preview so the next agent sees the provenance.
+
+This step exists because copy with no forced upstream context drifts into made-up punchy AI writing — sharp lines that assert instead of resonate. The questionnaire is the verification mechanism.
+
 ### Step 1: Define the concept
-Write down (in chat or as a comment) the four lines:
+Using the intake answers, write down (in chat or as a comment) the four lines:
 - **Hook** — 1 sentence, provocative, single thought
 - **Build** — 2–3 lines that prove the hook
 - **Payoff** — 1 receipt / stat / takeaway

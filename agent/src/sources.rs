@@ -17,6 +17,9 @@ pub struct SourceIndex {
     pub claims: Vec<Claim>,
     pub banned_phrases: Vec<String>,
     pub voice_metaphors: Vec<String>,
+    /// §6.4 — course lines liftable verbatim as Payoff copy. Eric's voice,
+    /// pre-approved. Surfaced to the model as anchor examples.
+    pub voice_rules: Vec<String>,
 }
 
 /// One row from §3 — a sourced numeric or factual claim safe to put on a slide.
@@ -43,11 +46,13 @@ impl SourceIndex {
         let claims = parse_claims(&body);
         let banned_phrases = parse_banned_phrases(&body);
         let voice_metaphors = parse_voice_metaphors(&body);
+        let voice_rules = parse_voice_rules(&body);
 
         debug!(
             claims = claims.len(),
             banned = banned_phrases.len(),
             metaphors = voice_metaphors.len(),
+            rules = voice_rules.len(),
             "loaded source index"
         );
 
@@ -55,6 +60,7 @@ impl SourceIndex {
             claims,
             banned_phrases,
             voice_metaphors,
+            voice_rules,
         })
     }
 
@@ -241,6 +247,36 @@ fn parse_voice_metaphors(body: &str) -> Vec<String> {
         .collect()
 }
 
+// ── §6.4 liftable voice-rule lines parser ─────────────────────────────────────
+
+fn parse_voice_rules(body: &str) -> Vec<String> {
+    let Some(section_start) = body.find("### 6.4 Voice rules pulled from the course") else {
+        return Vec::new();
+    };
+    let after = &body[section_start..];
+    let next_heading = after[1..]
+        .find("\n### ")
+        .map(|p| p + 1)
+        .or_else(|| after.find("\n## "))
+        .unwrap_or(after.len());
+    let section = &after[..next_heading];
+
+    section
+        .lines()
+        .filter_map(|line| {
+            let t = line.trim();
+            let rest = t.strip_prefix("- ")?;
+            let inner = rest.trim_matches(|c: char| c == '*' || c == '"' || c == '_');
+            // Skip the prose footer ("These can be lifted verbatim…").
+            if inner.is_empty() || inner.contains(':') {
+                None
+            } else {
+                Some(inner.trim().to_string())
+            }
+        })
+        .collect()
+}
+
 // ── neo4j-alexandria.py search output parser ──────────────────────────────────
 
 fn parse_alexandria_search(stdout: &str) -> Vec<AlexandriaHit> {
@@ -301,6 +337,24 @@ mod tests {
         assert!(claims[0].text.contains("Mon Rovia"));
         assert_eq!(claims[1].id, 8);
         assert!(claims[1].text.contains("Sweet Heat Lightning"));
+    }
+
+    #[test]
+    fn parses_voice_rules_skips_prose_footer() {
+        let body = "\
+### 6.4 Voice rules pulled from the course (apply to every carousel)
+
+- *\"If you can't name why it worked, you can't repeat it.\"*
+- *\"Clarity compounds.\"*
+
+These can be lifted verbatim as carousel Payoff lines.
+
+---
+";
+        let rules = parse_voice_rules(body);
+        assert_eq!(rules.len(), 2);
+        assert_eq!(rules[0], "If you can't name why it worked, you can't repeat it.");
+        assert_eq!(rules[1], "Clarity compounds.");
     }
 
     #[test]

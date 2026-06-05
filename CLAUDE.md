@@ -286,6 +286,8 @@ Examples:
 
 ## Working in This Repo (for Claude Code)
 
+**Step 0 — always first: run [CONTEXT-INTAKE.md](CONTEXT-INTAKE.md).** No carousel copy gets written until the intake questionnaire is answered (Blocks A + B are hard gates). A pasted topic is the trigger to run intake, not permission to skip it. Every on-slide claim must trace to a real source; if it can't, it's cut or made qualitative — never invented. This is the mechanism that keeps copy from drifting into made-up punchy AI writing. The rules below apply *after* Step 0.
+
 1. **Every carousel must be previewable.** Generate HTML that opens in a browser and looks right before any export step.
 2. **Stick to two formats.** Editorial (1 slide) and Value (2–7 slides). No posters, no Stories, no Reels.
 3. **Apply the full texture stack.** Glow pools, paper fibre, ink specks, scanlines, vignette. All five layers. If it looks "clean digital," it's wrong.
@@ -338,6 +340,9 @@ Drafts kicking around for fine-tuning. Naming: `preview-{slug}.html` while in fl
 | `preview-pre-release-curiosity.html` | 02 | Value (4 slides) | draft | "Drop day isn't launch." Hook → Build → Payoff → CTA. Sources: Undertow curiosity-gap + Mon Rovia 6-wk arc + Spotify pre-save weighting. |
 | `preview-save-economy.html` | 03 | Value (4 slides) | draft | "Your likes are lying to you." Money slide = giant **24%** save:like ratio. Sources: TikTok 2024 ranking signals + IG Reels save weighting + RT portfolio top-quartile. |
 | `preview-creator-curiosity.html` | 04 | Value (4 slides) | draft | "Your brief is killing the campaign." A/B build slide (Scripted vs Native). Sources: RT campaign portfolio + Kingmaker brief-to-native SOP + failed `label-scripted-creator-reads` Q4 2025. |
+| `preview-discovery-engine.html` | 05 | Value (4 slides) | draft | "The feed stopped knowing what's an ad." AGC for reach + UGC for trust = the discovery engine. Sources: Hormozi ad/content algo-convergence (Alexandria) + RPN AGC-at-scale (Alexandria). Positioning take — no measured stat. Inlined as `panel-carousel-discovery-engine`. |
+| `preview-polish-penalty.html` | 06 | Value (4 slides) | draft | "Your production budget is throttling your reach." Merged feed throttles anything that looks sold. Sources: Hormozi algo-convergence (Alexandria) + qualitative field observation. No measured stat. Inlined as `panel-carousel-polish-penalty`. |
+| `preview-authenticity-distribution.html` | 07 | Editorial (1 slide) | draft | Grid anchor — "Authenticity is now a distribution strategy." Distilled positioning line from the AGC/UGC thesis. Sources: Hormozi algo-convergence (Alexandria) + RT positioning. Inlined as `panel-carousel-authenticity-distribution`. |
 
 **Inline-the-stripped-version rule:** Pocket panels can't load `./brand/_brand.css` (srcdoc isolation). When inlining a preview into RT Pocket as a `<script type="text/html">` panel, strip the `_brand.css` `<link>` and substitute the logo SVG with a text mark — those two are the only diffs vs. the repo preview. Sources bar moves above/below freely.
 
@@ -345,5 +350,6 @@ Drafts kicking around for fine-tuning. Naming: `preview-{slug}.html` while in fl
 
 ## Change Log
 
+- **2026-05-18** — Added Vol. 05/06/07 — the AGC/UGC week (industry-intelligence/contrarian, one thesis at three altitudes). Vol. 05 *The Discovery Engine* (AGC reach + UGC trust), Vol. 06 *The Polish Penalty* (merged-feed throttles "ad-looking" creative), Vol. 07 *Authenticity Is Distribution* (Editorial grid anchor). All grounded in Hormozi ad/content algo-convergence (Alexandria) — zero fabricated stats. Inlined into RT Pocket as `#carousel-discovery-engine`, `#carousel-polish-penalty`, `#carousel-authenticity-distribution`. Pocket version `2026-05-18-006`. Note: cloudflared no-args launchd/watchdog respawn intermittently poisons the tunnel — cleanup applied, plist fix still pending (HANDOFF §7).
 - **2026-05-18** — Added Vol. 02/03/04 working previews plus carousel-ideas index. All four inlined into RT Pocket as panels (`#carousel-ideas`, `#carousel-pre-release-curiosity`, `#carousel-save-economy`, `#carousel-creator-curiosity`) for phone-side fine-tuning. Pocket version `2026-05-18-005`.
 - **2026-05-18** (earlier) — Initial Midnight Press Vol. 01 (`preview-midnight-press.html`) shipped + inlined into RT Pocket.

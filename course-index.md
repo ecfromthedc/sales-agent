@@ -541,6 +541,11 @@ Pull these — they're calibrated and on-brand:
 - *"Find your biggest leak. Fix it."*
 - *"Tier 1 gets the performance. Tier 2 gets the process. Tier 3 gets the person."*
 - *"You don't have a song. You have an upload."*
+- *"We found the song. Not the audience."*
+- *"The song never changed. The distribution did."*
+- *"The holdcos can't run our speed."*
+- *"Curated, not cast wide."*
+- *"Brevity is respect."*
 
 ### 6.2 Sentence cadence (pulled from course)
 
@@ -558,6 +563,18 @@ Pull these — they're calibrated and on-brand:
 - *"Elevate your…"*
 - *"Stop doing X, start doing Y"* triplets
 - *"Most artists…"* opener (overused; only use if the immediate follow-up is concrete)
+- *"leverage"* (verb — never "leverage your audience")
+- *"unlock"*
+- *"game-changer"* / *"game changing"*
+- *"next level"* / *"to the next level"*
+- *"ecosystem"*
+- *"in a world where…"*
+- *"we're excited to announce…"*
+- *"here's the thing"*
+- *"let's be honest"*
+- *"the truth is…"*
+- *"more than ever"*
+- *"it's not about X, it's about Y"* (the reversal — the #1 AI tell)
 
 ### 6.4 Voice rules pulled from the course (apply to every carousel)
 
@@ -566,7 +583,22 @@ Pull these — they're calibrated and on-brand:
 - *"You don't need to be louder. You need to be clearer. Clarity compounds."*
 - *"The algorithm rewards what people can't stop watching. Make it clear. Make it satisfying. Make it repeatable."*
 
-These can be lifted verbatim as carousel Payoff lines.
+These can be lifted verbatim as carousel Payoff lines. (Parsed into the agent as `voice_rules` and surfaced to the model as pre-approved Payoff anchors — `sources.rs::parse_voice_rules`.)
+
+### 6.5 Eric's voice fingerprint (the anti-AI core)
+
+The transferable DNA of how Eric actually writes — distilled from his communication-style profile (`~/Projects/active/sales-agent/EC-COMMUNICATION-STYLE.md`) and adapted to the Midnight Press editorial register. **This now lives hard-coded in the agent system prompt** (`generator.rs::build_system_prompt`) because it's stable brand DNA, not a list that churns. Documented here so the data layer stays the single source of truth.
+
+- **Brevity is respect.** SVO. Get in, say the thing, get out. A comma to breathe = cut it in two.
+- **One number, huge.** Never five. Drop it bare, no setup. "30K to 1.8M" beats any adjective.
+- **Lead with what happened / what we can do.** Never hedge, never apologize, never warm up.
+- **Confidence is belief, not a guarantee.** "High confidence" — never "we promise."
+- **Challenger-analytical when naming the gap.** Plain, like an investor reading market structure — not a salesperson listing features.
+- **Proof is casual, in context, mid-thought.** "One creator pushed 700k views to the first sound." Never a portfolio section.
+- **Concrete beats abstract.** A real noun (the upload, the sound, the feed) beats a concept (authenticity, engagement).
+- **Asymmetric rhythm.** A long line, then a three-word fragment. Balanced lines are the tell.
+
+**The #1 AI tell to kill:** the reversal — "It's not X. It's Y." / "X doesn't mean A. It means B." Zero per carousel if possible; one absolute max. This is the structure that makes RT copy read inauthentic.
 
 ---
 
