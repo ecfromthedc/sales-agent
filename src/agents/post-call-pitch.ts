@@ -18,6 +18,7 @@ import type { Env } from "../lib/env";
 import { resolveDealForMeeting, attachPitchArtifacts, saveTranscript } from "../integrations/notion";
 import { composePitch } from "../lib/anthropic";
 import { renderPitchPdf } from "../integrations/pdf";
+import { recordRun, recordError } from "../lib/run-state";
 
 interface PostCallPitchInput {
   meetingTitle: string;
@@ -49,39 +50,46 @@ export async function runPostCallPitch(input: PostCallPitchInput, env: Env): Pro
     return;
   }
 
-  await saveTranscript({
-    dealId: deal.id,
-    transcript: input.transcript,
-    summary: input.summary,
-    startedAt: input.startedAt,
-    endedAt: input.endedAt,
-    sourceUrl: input.transcriptSourceUrl,
-  }, env);
+  try {
+    await saveTranscript({
+      dealId: deal.id,
+      transcript: input.transcript,
+      summary: input.summary,
+      startedAt: input.startedAt,
+      endedAt: input.endedAt,
+      sourceUrl: input.transcriptSourceUrl,
+    }, env);
 
-  const pitch = await composePitch({
-    deal,
-    transcript: input.transcript,
-    summary: input.summary,
-  }, env);
+    const pitch = await composePitch({
+      deal,
+      transcript: input.transcript,
+      summary: input.summary,
+    }, env);
 
-  const pdfKey = await renderPitchPdf({
-    dealId: deal.id,
-    html: pitch.deckHtml,
-    styleGuide: "swiss-grid",
-  }, env);
+    const pdfKey = await renderPitchPdf({
+      dealId: deal.id,
+      html: pitch.deckHtml,
+      styleGuide: "swiss-grid",
+    }, env);
 
-  await attachPitchArtifacts({
-    dealId: deal.id,
-    pdfKey,
-    emailDraft: pitch.emailDraft,
-    actionItems: pitch.actionItems,
-    transcriptQuoted: pitch.quotedTranscriptLines,
-  }, env);
+    await attachPitchArtifacts({
+      dealId: deal.id,
+      pdfKey,
+      emailDraft: pitch.emailDraft,
+      actionItems: pitch.actionItems,
+      transcriptQuoted: pitch.quotedTranscriptLines,
+    }, env);
 
-  const elapsedMs = Date.now() - startedAt;
-  console.log("post_call_pitch_complete", {
-    dealId: deal.id,
-    elapsedMs,
-    quotedLines: pitch.quotedTranscriptLines.length,
-  });
+    const elapsedMs = Date.now() - startedAt;
+    console.log("post_call_pitch_complete", {
+      dealId: deal.id,
+      elapsedMs,
+      quotedLines: pitch.quotedTranscriptLines.length,
+    });
+    await recordRun(env, "pitch");
+  } catch (err) {
+    console.error("post_call_pitch_failed", { dealId: deal.id, message: (err as Error).message });
+    await recordError(env, "pitch");
+    throw err;
+  }
 }

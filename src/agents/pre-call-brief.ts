@@ -19,6 +19,7 @@ import { searchGmailHistory } from "../integrations/gmail";
 import { lookupCRM } from "../integrations/crm-lookup";
 import { upsertDeal, type DealUpsertInput } from "../integrations/notion";
 import { composeBrief } from "../lib/anthropic";
+import { recordRun, recordError } from "../lib/run-state";
 
 interface PreCallBriefInput {
   inviteeEmail: string;
@@ -159,6 +160,7 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       invitee: input.inviteeEmail,
       elapsedMs: Date.now() - startedAt,
     });
+    await recordRun(env, "brief");
   } catch (err) {
     const e = err as Error;
     console.error("pre_call_brief_failed", {
@@ -166,6 +168,7 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       message: e.message,
       stack: e.stack?.split("\n").slice(0, 6).join(" | "),
     });
+    await recordError(env, "brief");
     throw err;
   }
 }
