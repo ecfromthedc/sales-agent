@@ -102,6 +102,8 @@ const PRE_CALL_BRIEF_SYSTEM = `You write pre-call briefs for Eric Cromartie, fou
 
 **RT HISTORY** — Check enrichment.crm first (exactMatches = this artist, labelMatches = same label or related artists). For each hit: artist, song, stage, spend, label. Then check enrichment.gmail for email threads. If CRM has matches, lead with them — "RT ran X campaign for $Y" is the strongest thing Eric can say on the call. Only say "Cold" if both are empty.
 
+**COMPARABLE CLIENTS** — Check enrichment.comparables (RT past clients pre-ranked most-similar-first by genre, audience tier, and recency). If non-empty, list the top 1-3: artist name + why they're comparable (same genre, similar audience size, or recent). These are real RT campaigns Eric can name-drop as proof — "we did this for [comparable artist], same lane as you." Only use names that appear in enrichment.comparables. If empty, skip this section entirely — don't invent comparables.
+
 **THE PLAY** — What Eric should pitch. One paragraph max. Match the tier:
 - Under 100K: prove RT moves the needle. Audience building.
 - 100K-1M: growth. Content testing + playlist strategy.

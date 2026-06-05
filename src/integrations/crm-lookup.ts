@@ -9,6 +9,7 @@
  */
 
 import type { Env } from "../lib/env";
+import type { ComparableCandidate } from "../lib/comparables";
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
@@ -95,6 +96,27 @@ export async function lookupCRM(
   }
 
   return result;
+}
+
+/**
+ * Adapt a CRM `CampaignMatch` into a `ComparableCandidate` for the comparables
+ * ranker.
+ *
+ * The CRM row does not currently carry the past client's genre tags or audience
+ * size, so those fields are left `undefined` — we do NOT invent them. The
+ * ranker therefore scores CRM-derived candidates on recency (campaign
+ * `startDate`) and, when future schema work adds genre/audience columns, this
+ * adapter is the single place to wire them in. Same-lane relevance is already
+ * guaranteed upstream: candidates only reach here because the artist, label, or
+ * a related artist matched.
+ */
+export function campaignToComparable(match: CampaignMatch): ComparableCandidate {
+  return {
+    id: match.notionUrl,
+    artistName: match.artistName,
+    startDate: match.startDate,
+    // genres / audience intentionally omitted — not present on CRM rows.
+  };
 }
 
 async function searchCRM(
