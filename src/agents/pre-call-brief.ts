@@ -22,6 +22,7 @@ import { rankComparables, type ProspectSignal } from "../lib/comparables";
 import { composeBrief } from "../lib/anthropic";
 import { recordRun, recordError } from "../lib/run-state";
 import { retry } from "../lib/retry";
+import { notifySlack, buildBriefMessage } from "../integrations/slack";
 
 // Enrichment sources are external and fail transiently (network blips, 429/5xx).
 // Each call is wrapped in `retry` (exponential backoff + jitter) so a transient
@@ -151,54 +152,24 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       enrichment,
     }, env);
 
-    // Post full brief to Slack (best-effort, don't block on failure)
-    if (env.SLACK_BOT_TOKEN && env.SLACK_BRIEF_CHANNEL_ID) {
-      try {
-        const notionUrl = `https://www.notion.so/${pageId.replace(/-/g, "")}`;
-        const meetingTime = new Date(input.eventStartsAt).toLocaleString("en-US", {
-          timeZone: "America/New_York",
-          weekday: "short", month: "short", day: "numeric",
-          hour: "numeric", minute: "2-digit",
-        });
-
-        // Convert markdown-ish brief to Slack mrkdwn
-        const slackBrief = brief
-          .replace(/\*\*([^*]+)\*\*/g, "*$1*")   // **bold** → *bold*
-          .replace(/^#{1,3}\s+/gm, "*")           // ### heading → *heading
-          .replace(/\|/g, "│")                     // table pipes → unicode
-          .slice(0, 2900);                         // Slack block limit
-
-        await fetch("https://slack.com/api/chat.postMessage", {
-          method: "POST",
-          headers: {
-            authorization: `Bearer ${env.SLACK_BOT_TOKEN}`,
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            channel: env.SLACK_BRIEF_CHANNEL_ID,
-            text: `📋 *${input.inviteeName}* — ${meetingTime}`,
-            blocks: [
-              {
-                type: "header",
-                text: { type: "plain_text", text: `📋 ${input.inviteeName} — ${meetingTime}` },
-              },
-              {
-                type: "section",
-                text: { type: "mrkdwn", text: slackBrief },
-              },
-              {
-                type: "context",
-                elements: [
-                  { type: "mrkdwn", text: `<${notionUrl}|Open in Notion> │ ${input.inviteeEmail}` },
-                ],
-              },
-            ],
-          }),
-        });
-      } catch (slackErr) {
-        console.warn("slack_notify_failed", (slackErr as Error).message);
-      }
-    }
+    // Post full brief to Slack (best-effort; notifySlack no-ops on missing
+    // token/channel and never throws into the run path).
+    const meetingTime = new Date(input.eventStartsAt).toLocaleString("en-US", {
+      timeZone: "America/New_York",
+      weekday: "short", month: "short", day: "numeric",
+      hour: "numeric", minute: "2-digit",
+    });
+    await notifySlack(
+      env,
+      env.SLACK_BRIEF_CHANNEL_ID,
+      buildBriefMessage({
+        inviteeName: input.inviteeName,
+        inviteeEmail: input.inviteeEmail,
+        meetingTime,
+        brief,
+        pageId,
+      }),
+    );
 
     console.log("pre_call_brief_complete", {
       invitee: input.inviteeEmail,

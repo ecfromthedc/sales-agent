@@ -26,6 +26,7 @@ export interface Env {
   MEET_RECORDINGS_FOLDER_ID: string;
   SLACK_BOT_TOKEN: string;
   SLACK_BRIEF_CHANNEL_ID: string;
+  SLACK_PROPOSALS_CHANNEL_ID?: string;   // optional; post-call pitch notices (no-ops if unset)
 
   // Bindings
   PITCH_PDFS: R2Bucket;
