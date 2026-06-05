@@ -8,7 +8,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
@@ -17,6 +18,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240614.0",
     "typescript": "^5.4.0",
+    "vitest": "^2.1.9",
     "wrangler": "^3.60.0"
   }
 }
