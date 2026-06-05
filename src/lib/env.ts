@@ -15,6 +15,7 @@ export interface Env {
   GMAIL_OAUTH_CLIENT_ID: string;
   GMAIL_OAUTH_CLIENT_SECRET: string;
   TIDES_TRACKER_API_KEY: string;
+  TIDES_TRACKER_BASE_URL?: string;       // optional; deprecated Tides Tracker host (crm-lookup is canonical)
   TEST_AUTH_KEY: string;
   RAPIDAPI_KEY: string;
 
