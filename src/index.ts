@@ -5,7 +5,8 @@
  *   POST /webhooks/calendly       Calendly invitee.created → pre-call brief
  *   POST /webhooks/transcript     Drive push notification (optional, future)
  *   POST /runs/:dealId/:agent     Manual rerun ("pre-call" | "post-call")
- *   GET  /health                  Health check
+ *   GET  /health                  Liveness check (+ KV binding presence)
+ *   GET  /status                  Observability: last cron/brief/pitch runs + error counts
  *
  * Cron:
  *   *\/5 * * * *  poll Drive for new Meet transcripts → run post-call pitch
@@ -18,6 +19,9 @@ import { handleManualRerun } from "./triggers/manual";
 import { pollTranscripts } from "./triggers/transcript-poll";
 import { pollCalendly } from "./triggers/calendly-poll";
 import { handleTestPreCall } from "./triggers/test";
+import { readRunState, shapeStatus, recordRun, recordError } from "./lib/run-state";
+
+const SERVICE = "rt-sales-call-agent";
 
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -26,7 +30,19 @@ export default {
 
     try {
       if (route === "GET /health") {
-        return json({ ok: true, service: "rt-sales-call-agent" });
+        // Liveness + a cheap check that the state store is actually bound.
+        return json({
+          ok: true,
+          service: SERVICE,
+          stateBound: typeof env.STATE?.get === "function",
+        });
+      }
+
+      if (route === "GET /status") {
+        // Observability snapshot. Reads only `status:*` KV keys via the pure
+        // shaper, so no secret can be surfaced here.
+        const raw = await readRunState(env);
+        return json(shapeStatus(raw, { service: SERVICE }));
       }
 
       if (route === "POST /webhooks/calendly") {
@@ -56,16 +72,33 @@ export default {
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(
-      Promise.allSettled([
-        pollCalendly(env).then(
-          (r) => console.log("calendly_poll_complete", r),
-          (err) => console.error("calendly_poll_failed", { message: (err as Error).message }),
-        ),
-        pollTranscripts(env).then(
-          (r) => console.log("transcript_poll_complete", r),
-          (err) => console.error("transcript_poll_failed", { message: (err as Error).message }),
-        ),
-      ]).then(() => undefined),
+      (async () => {
+        await Promise.allSettled([
+          pollCalendly(env).then(
+            async (r) => {
+              console.log("calendly_poll_complete", r);
+              await recordRun(env, "calendly-poll");
+            },
+            async (err) => {
+              console.error("calendly_poll_failed", { message: (err as Error).message });
+              await recordError(env, "calendly-poll");
+            },
+          ),
+          pollTranscripts(env).then(
+            async (r) => {
+              console.log("transcript_poll_complete", r);
+              await recordRun(env, "transcript-poll");
+            },
+            async (err) => {
+              console.error("transcript_poll_failed", { message: (err as Error).message });
+              await recordError(env, "transcript-poll");
+            },
+          ),
+        ]);
+        // Stamp the cron tick itself last, so `cron.lastRun` reflects a fully
+        // completed scheduled() pass.
+        await recordRun(env, "cron");
+      })(),
     );
   },
 };
