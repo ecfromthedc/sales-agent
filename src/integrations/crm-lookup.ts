@@ -114,24 +114,39 @@ async function searchCRM(
   if (!res.ok) return [];
 
   const data = (await res.json()) as {
-    results: Array<{ id: string; properties: Record<string, any> }>;
+    results: NotionPage[];
   };
 
-  return data.results.map((page) => {
-    const p = page.properties;
-    return {
-      artistName: p["Artist Name"]?.title?.[0]?.text?.content ?? "Unknown",
-      songName: p["Song Name"]?.rich_text?.[0]?.text?.content ?? "",
-      campaignStage: p["Campaign Stage"]?.status?.name ?? "Unknown",
-      pipelineStatus: p["Pipeline Status"]?.status?.name ?? "Unknown",
-      mediaSpend: p["Media Spend"]?.number ?? null,
-      labelPartner: p["Label/Distro Partner"]?.rich_text?.[0]?.text?.content ?? "",
-      startDate: p["Desired Start Date"]?.date?.start ?? null,
-      futurePotential: p["Future potencial"]?.select?.name ?? "",
-      creatorTypes: (p["Types of Content Creators"]?.multi_select ?? []).map(
-        (s: any) => s.name,
-      ),
-      notionUrl: `https://www.notion.so/${page.id.replace(/-/g, "")}`,
-    };
-  });
+  return data.results.map(mapPageToCampaignMatch);
+}
+
+/** A Notion query result row, narrowed to what we read. */
+export interface NotionPage {
+  id: string;
+  properties: Record<string, any>;
+}
+
+/**
+ * Shape a raw Notion CRM page into a `CampaignMatch`.
+ *
+ * Pure — no I/O. Extracted so the (brittle) Notion property unwrapping is
+ * unit-testable independent of the network. Every field is defensively
+ * defaulted because Notion omits empty properties' inner arrays.
+ */
+export function mapPageToCampaignMatch(page: NotionPage): CampaignMatch {
+  const p = page.properties;
+  return {
+    artistName: p["Artist Name"]?.title?.[0]?.text?.content ?? "Unknown",
+    songName: p["Song Name"]?.rich_text?.[0]?.text?.content ?? "",
+    campaignStage: p["Campaign Stage"]?.status?.name ?? "Unknown",
+    pipelineStatus: p["Pipeline Status"]?.status?.name ?? "Unknown",
+    mediaSpend: p["Media Spend"]?.number ?? null,
+    labelPartner: p["Label/Distro Partner"]?.rich_text?.[0]?.text?.content ?? "",
+    startDate: p["Desired Start Date"]?.date?.start ?? null,
+    futurePotential: p["Future potencial"]?.select?.name ?? "",
+    creatorTypes: (p["Types of Content Creators"]?.multi_select ?? []).map(
+      (s: any) => s.name,
+    ),
+    notionUrl: `https://www.notion.so/${page.id.replace(/-/g, "")}`,
+  };
 }
