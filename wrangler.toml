@@ -29,6 +29,13 @@ SLACK_BRIEF_CHANNEL_ID = "C0B47J6FZ47"
 #   GMAIL_OAUTH_CLIENT_SECRET
 #   TIDES_TRACKER_API_KEY            (optional)
 
+# Cloudflare Browser Rendering — headless Chromium for HTML -> PDF (pitch decks).
+# Requires Browser Rendering enabled on the account/plan. Only runs in a deployed
+# Worker; `wrangler dev` and unit tests do not provide a live browser, so
+# src/integrations/pdf.ts falls back to a pending key when the binding is absent.
+[browser]
+binding = "BROWSER"
+
 # R2 bucket for pitch PDFs
 [[r2_buckets]]
 binding = "PITCH_PDFS"

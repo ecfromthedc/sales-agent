@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
+    "@cloudflare/puppeteer": "^1.1.0",
     "@notionhq/client": "^2.2.15"
   },
   "devDependencies": {
