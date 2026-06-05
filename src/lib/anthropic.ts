@@ -8,6 +8,11 @@
  */
 
 import type { Env } from "./env";
+import {
+  type FilledPitchSection,
+  orderSections,
+  sectionsPromptBlock,
+} from "./pitch-sections";
 
 const API_URL = "https://api.anthropic.com/v1/messages";
 const API_VERSION = "2023-06-01";
@@ -113,6 +118,9 @@ export interface PitchOutput {
   emailDraft: string;
   actionItems: string[];
   quotedTranscriptLines: string[];
+  /** Canonical, ordered deck sections (see lib/pitch-sections.ts). Always the
+   *  full set in template order; missing sections come back with an empty body. */
+  sections: FilledPitchSection[];
 }
 
 export async function composePitch(input: {
@@ -139,6 +147,10 @@ export async function composePitch(input: {
   if (!parsed.quotedTranscriptLines || parsed.quotedTranscriptLines.length < 3) {
     throw new Error("pitch_must_quote_three_lines");
   }
+  // Normalize the model's sections into the canonical order. Always returns the
+  // full ordered set (missing sections come back empty) so every deck is
+  // structurally consistent regardless of what the model emitted.
+  parsed.sections = orderSections((parsed as { sections?: unknown }).sections);
   return parsed;
 }
 
@@ -150,10 +162,19 @@ You will be given a sales call transcript. Produce a JSON object with this exact
   "deckHtml": "...",
   "emailDraft": "...",
   "actionItems": ["...", "..."],
-  "quotedTranscriptLines": ["...", "...", "..."]
+  "quotedTranscriptLines": ["...", "...", "..."],
+  "sections": [{ "id": "...", "title": "...", "body": "..." }]
 }
 
+The deck must follow this exact section structure, in this order. Fill every
+section as one entry in "sections" using the given "id", and build "deckHtml"
+from the same sections in the same order:
+
+${sectionsPromptBlock()}
+
 Hard rules:
+- "sections" must contain one entry per id above, in order, each with a non-empty "body".
+- "deckHtml" must render those same sections in the same order (Swiss-grid layout).
 - The email body must quote at least 3 specific things the prospect said.
 - Never invent numbers, deals, or quotes.
 - Output ONLY the JSON object, no preamble, no code fence.
