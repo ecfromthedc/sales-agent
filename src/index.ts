@@ -4,7 +4,11 @@
  * HTTP routes:
  *   POST /webhooks/calendly       Calendly invitee.created → pre-call brief
  *   POST /webhooks/transcript     Drive push notification (optional, future)
- *   POST /runs/:dealId/:agent     Manual rerun ("pre-call" | "post-call")
+ *   POST /runs/:dealId/:agent     Manual rerun ("pre-call" | "post-call" | "proposal")
+ *   POST /slack/interactions      Slack interactive callbacks (proposal refine/approve)
+ *   POST /slack/events            Slack Events API (proposal refine via message)
+ *   POST /webhooks/fireflies      Fireflies transcript ready → proposal draft
+ *   GET  /p/:dealId               Public live proposal link (client-facing)
  *   GET  /health                  Liveness check (+ KV binding presence)
  *   GET  /status                  Observability: last cron/brief/pitch runs + error counts
  *
@@ -21,6 +25,10 @@ import { pollCalendly } from "./triggers/calendly-poll";
 import { handleTestPreCall } from "./triggers/test";
 import { handleSmokeTest } from "./triggers/smoke";
 import { readRunState, shapeStatus, recordRun, recordError } from "./lib/run-state";
+import { handleSlackInteraction } from "./triggers/slack-interactions";
+import { handleSlackEvent } from "./triggers/slack-events";
+import { handleFirefliesWebhook } from "./triggers/fireflies-webhook";
+import { serveProposal } from "./triggers/proposal-public";
 
 const SERVICE = "rt-sales-call-agent";
 
@@ -62,10 +70,28 @@ export default {
         return await handleSmokeTest(req, env, ctx);
       }
 
-      const manualMatch = url.pathname.match(/^\/runs\/([^/]+)\/(pre-call|post-call)$/);
+      if (route === "POST /slack/interactions") {
+        return await handleSlackInteraction(req, env, ctx);
+      }
+
+      if (route === "POST /slack/events") {
+        return await handleSlackEvent(req, env, ctx);
+      }
+
+      if (route === "POST /webhooks/fireflies") {
+        return await handleFirefliesWebhook(req, env, ctx);
+      }
+
+      // Public live proposal link (no auth — clients open this).
+      const proposalMatch = url.pathname.match(/^\/p\/([^/]+)$/);
+      if (req.method === "GET" && proposalMatch) {
+        return await serveProposal(proposalMatch[1], env);
+      }
+
+      const manualMatch = url.pathname.match(/^\/runs\/([^/]+)\/(pre-call|post-call|proposal)$/);
       if (req.method === "POST" && manualMatch) {
         const [, dealId, agent] = manualMatch;
-        return await handleManualRerun(dealId, agent as "pre-call" | "post-call", env, ctx);
+        return await handleManualRerun(dealId, agent as "pre-call" | "post-call" | "proposal", env, ctx);
       }
 
       return json({ error: "not_found", route }, 404);

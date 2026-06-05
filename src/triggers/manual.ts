@@ -1,16 +1,17 @@
 /**
  * Manual rerun endpoint — hit from a Notion button to re-run an agent on a deal.
- * POST /runs/:dealId/:agent  where agent is "pre-call" | "post-call"
+ * POST /runs/:dealId/:agent  where agent is "pre-call" | "post-call" | "proposal"
  */
 
 import type { Env } from "../lib/env";
 import { getDealById } from "../integrations/notion";
 import { runPreCallBrief } from "../agents/pre-call-brief";
 import { runPostCallPitch } from "../agents/post-call-pitch";
+import { runProposalDrafter } from "../agents/proposal-drafter";
 
 export async function handleManualRerun(
   dealId: string,
-  agent: "pre-call" | "post-call",
+  agent: "pre-call" | "post-call" | "proposal",
   env: Env,
   ctx: ExecutionContext,
 ): Promise<Response> {
@@ -30,7 +31,7 @@ export async function handleManualRerun(
         dealId,
       }, env),
     );
-  } else {
+  } else if (agent === "post-call") {
     if (!deal.transcript) {
       return new Response(
         JSON.stringify({ error: "no_transcript", dealId, hint: "Attach transcript first" }),
@@ -47,6 +48,14 @@ export async function handleManualRerun(
         dealId,
       }, env),
     );
+  } else {
+    if (!deal.transcript) {
+      return new Response(
+        JSON.stringify({ error: "no_transcript", dealId, hint: "Run after a transcript is attached" }),
+        { status: 400 },
+      );
+    }
+    ctx.waitUntil(runProposalDrafter(deal, env));
   }
 
   return new Response(JSON.stringify({ ok: true, queued: agent, dealId }), { status: 200 });

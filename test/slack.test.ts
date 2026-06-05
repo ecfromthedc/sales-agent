@@ -222,4 +222,16 @@ describe("buildPitchMessage", () => {
       "https://www.notion.so/3611465bb82981dea237cf6516fe8fcf",
     );
   });
+
+  it("exposes a Draft Proposal action carrying the deal id (proposal pipeline entry point)", () => {
+    const actions = buildPitchMessage({ ...base, dealId: "deal-xyz" }).blocks?.[3] as {
+      type: string;
+      elements: Array<{ action_id?: string; value?: string; url?: string }>;
+    };
+    expect(actions.type).toBe("actions");
+    const draftBtn = actions.elements.find((e) => e.action_id === "draft_proposal");
+    expect(draftBtn).toBeDefined();
+    // slack-interactions reads action.value as the deal id — must round-trip exactly.
+    expect(draftBtn?.value).toBe("deal-xyz");
+  });
 });
