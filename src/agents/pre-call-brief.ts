@@ -20,6 +20,13 @@ import { lookupCRM } from "../integrations/crm-lookup";
 import { upsertDeal, type DealUpsertInput } from "../integrations/notion";
 import { composeBrief } from "../lib/anthropic";
 import { recordRun, recordError } from "../lib/run-state";
+import { retry } from "../lib/retry";
+
+// Enrichment sources are external and fail transiently (network blips, 429/5xx).
+// Each call is wrapped in `retry` (exponential backoff + jitter) so a transient
+// blip self-heals, while `Promise.allSettled` still guarantees one source's
+// permanent failure never blocks the brief.
+const ENRICH_RETRY = { retries: 2, baseDelayMs: 300, maxDelayMs: 4000 } as const;
 
 interface PreCallBriefInput {
   inviteeEmail: string;
@@ -44,11 +51,17 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       ? spotifyLink.match(/artist\/([a-zA-Z0-9]{22})/)?.[1] ?? null
       : null;
 
-    // Phase 1: Songstats + Spotify + Gmail in parallel (Songstats is sequential internally)
+    // Phase 1: Songstats + Spotify + Gmail in parallel (Songstats is sequential internally).
+    // Each source is retried independently with exponential backoff; allSettled keeps
+    // partial failures from blocking the others.
     const [spotify, songstats, gmail] = await Promise.allSettled([
-      spotifyLink ? enrichFromSpotify(spotifyLink, env) : Promise.resolve(null),
-      spotifyArtistId ? enrichFromSongstats(spotifyArtistId, env) : Promise.resolve(null),
-      searchGmailHistory(input.inviteeEmail, env),
+      spotifyLink
+        ? retry(() => enrichFromSpotify(spotifyLink, env), ENRICH_RETRY)
+        : Promise.resolve(null),
+      spotifyArtistId
+        ? retry(() => enrichFromSongstats(spotifyArtistId, env), ENRICH_RETRY)
+        : Promise.resolve(null),
+      retry(() => searchGmailHistory(input.inviteeEmail, env), ENRICH_RETRY),
     ]);
 
     // Phase 2: CRM lookup — uses artist name from Songstats if available, falls back to invitee name
@@ -60,11 +73,10 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
     const labelHint = input.questionsAndAnswers
       .find((qa) => /label|distro/i.test(qa.question))?.answer?.trim();
 
-    const crmLookup = await lookupCRM({
-      artistName,
-      label: labelHint,
-      relatedArtists,
-    }, env).catch((e) => {
+    const crmLookup = await retry(
+      () => lookupCRM({ artistName, label: labelHint, relatedArtists }, env),
+      ENRICH_RETRY,
+    ).catch((e) => {
       console.warn("crm_lookup_failed", (e as Error).message);
       return { exactMatches: [], labelMatches: [], totalCampaignsFound: 0 };
     });
