@@ -18,7 +18,45 @@ import type { Env } from "../lib/env";
 import { resolveDealForMeeting, attachPitchArtifacts, saveTranscript } from "../integrations/notion";
 import { composePitch } from "../lib/anthropic";
 import { renderPitchPdf } from "../integrations/pdf";
+import { createGmailDraft } from "../integrations/gmail";
 import { recordRun, recordError } from "../lib/run-state";
+
+// Henry/sales follow-ups are always sent from Eric's account.
+const FOLLOW_UP_FROM = "Eric Cromartie <ec@risingtidesent.com>";
+
+/**
+ * Create a Gmail DRAFT of the follow-up email (approval gate — SALE-63).
+ * Draft-only: a human reviews and sends. Guarded + non-throwing so a draft
+ * failure (e.g. the read-only token still lacking gmail.compose scope) never
+ * breaks the already-attached pitch artifacts.
+ */
+async function draftFollowUpEmail(
+  input: PostCallPitchInput,
+  emailDraft: string,
+  env: Env,
+): Promise<void> {
+  const to = input.attendees.find((a) => a.email)?.email?.trim();
+  const body = emailDraft?.trim();
+  if (!to || !body) {
+    console.warn("post_call_pitch_draft_skipped", {
+      reason: !to ? "no_recipient" : "no_email_body",
+    });
+    return;
+  }
+
+  const subject = input.meetingTitle?.trim()
+    ? `Following up: ${input.meetingTitle.trim()}`
+    : "Following up on our call";
+
+  try {
+    const draft = await createGmailDraft(env, { to, from: FOLLOW_UP_FROM, subject, body });
+    console.log("post_call_pitch_draft_created", { to, draftId: draft.draftId });
+  } catch (err) {
+    // Non-fatal: log and move on. Most likely cause is the OAuth token still
+    // being read-only scoped (needs gmail.compose) — see gmail.ts scope note.
+    console.warn("post_call_pitch_draft_failed", { to, message: (err as Error).message });
+  }
+}
 
 interface PostCallPitchInput {
   meetingTitle: string;
@@ -79,6 +117,11 @@ export async function runPostCallPitch(input: PostCallPitchInput, env: Env): Pro
       actionItems: pitch.actionItems,
       transcriptQuoted: pitch.quotedTranscriptLines,
     }, env);
+
+    // Approval gate (SALE-63): stage the follow-up as a Gmail DRAFT only.
+    // Never auto-send — Eric reviews and sends. Guarded so a draft failure
+    // doesn't undo the artifacts already attached above.
+    await draftFollowUpEmail(input, pitch.emailDraft, env);
 
     const elapsedMs = Date.now() - startedAt;
     console.log("post_call_pitch_complete", {

@@ -16,6 +16,106 @@ export interface GmailHistory {
 
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me";
 
+// ---------------------------------------------------------------------------
+// Draft creation (approval gate — SALE-63)
+//
+// We create a Gmail DRAFT only. There is deliberately NO send path in this
+// module: a human (Eric) reviews every follow-up in Gmail and presses send.
+//
+// SCOPE REQUIREMENT — IMPORTANT:
+//   The shared GMAIL_OAUTH_REFRESH_TOKEN is currently minted with
+//   `gmail.readonly` + `drive.readonly` (see FINISH_SETUP_BROWSER_PROMPT.md).
+//   `users.drafts.create` requires WRITE scope. This call will 403 until the
+//   refresh token is re-minted with `gmail.compose` (or `gmail.modify`).
+//   The code below is correct and guarded so it can't break the pitch flow;
+//   it simply will not succeed until the token is re-scoped. Re-mint via the
+//   same OAuth consent flow used in FINISH_SETUP_BROWSER_PROMPT.md, adding:
+//     https://www.googleapis.com/auth/gmail.compose
+// ---------------------------------------------------------------------------
+
+export interface GmailDraftInput {
+  to: string;
+  from: string;
+  subject: string;
+  body: string;
+}
+
+export interface GmailDraftResult {
+  draftId: string;
+  messageId?: string;
+}
+
+/**
+ * Base64url-encode a UTF-8 string the way the Gmail API expects raw messages:
+ * standard base64, then `+`→`-`, `/`→`_`, and stripped `=` padding.
+ * Workers-compatible (uses `btoa`; no Node Buffer).
+ */
+export function base64UrlEncode(input: string): string {
+  // btoa operates on Latin-1; encodeURIComponent + unescape round-trips UTF-8
+  // into a byte string btoa can handle (so accents/emoji in the body survive).
+  const bytes = unescape(encodeURIComponent(input));
+  return btoa(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+/** Fold a header value and drop CR/LF so callers can't inject extra headers. */
+function sanitizeHeader(value: string): string {
+  return value.replace(/[\r\n]+/g, " ").trim();
+}
+
+/**
+ * Build an RFC822 MIME message (plain-text, UTF-8) from a draft input.
+ * PURE + side-effect-free so it is trivially unit-testable. Produces only the
+ * standard draft headers — there is intentionally no Bcc/auto-send field and
+ * nothing that would cause Gmail to dispatch the message.
+ */
+export function buildMimeMessage(input: GmailDraftInput): string {
+  const headers = [
+    `From: ${sanitizeHeader(input.from)}`,
+    `To: ${sanitizeHeader(input.to)}`,
+    `Subject: ${sanitizeHeader(input.subject)}`,
+    "MIME-Version: 1.0",
+    'Content-Type: text/plain; charset="UTF-8"',
+    "Content-Transfer-Encoding: 8bit",
+  ];
+  // CRLF line endings per RFC822; blank line separates headers from body.
+  return headers.join("\r\n") + "\r\n\r\n" + input.body;
+}
+
+/**
+ * Create a Gmail DRAFT (never send). Calls `users.drafts.create` with a raw
+ * base64url-encoded RFC822 message. Returns the created draft id.
+ *
+ * Throws on non-2xx (including the expected 403 while the token is still
+ * read-only scoped — see the SCOPE REQUIREMENT note above). Callers in the
+ * pitch flow guard this so a draft failure never breaks pitch artifacts.
+ */
+export async function createGmailDraft(
+  env: Env,
+  input: GmailDraftInput,
+): Promise<GmailDraftResult> {
+  const token = await getGoogleAccessToken(env);
+  const raw = base64UrlEncode(buildMimeMessage(input));
+
+  const res = await fetch(`${GMAIL_API}/drafts`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ message: { raw } }),
+  });
+
+  if (!res.ok) {
+    throw new Error(
+      `gmail_draft_create_failed: ${res.status} ${(await res.text()).slice(0, 300)}`,
+    );
+  }
+
+  const data = (await res.json()) as { id?: string; message?: { id?: string } };
+  if (!data.id) throw new Error("gmail_draft_create_no_id");
+  return { draftId: data.id, messageId: data.message?.id };
+}
+
 export async function searchGmailHistory(
   inviteeEmail: string,
   env: Env,
