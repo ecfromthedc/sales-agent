@@ -1,5 +1,13 @@
 # RT Sales Call Agent
 
+> **This repo is now the RT Agents monorepo (3 build lanes sharing a core).**
+> The three lanes are: **sales** (this `src/` — CF Worker `rt-sales-call-agent`),
+> **outreach / Henry** (`./outreach/` — self-contained CF Worker `rt-henry`), and
+> **carousels** (`./carousels/agent/` — Rust axum local daemon). For the full
+> structure, shared core, CI gates, and per-lane build/deploy commands, see
+> [`ARCHITECTURE.md`](./ARCHITECTURE.md). The rest of this file is
+> **sales-lane-specific** and still applies to work under `src/`.
+
 **Repo path:** `/Users/ericcromartie/Documents/Development/sales-agent`  
 **Cloudflare Worker name:** `rt-sales-call-agent` (package + deploy name; folder is `sales-agent`)  
 **Owner:** Rising Tides agency — Eric Cromartie (`ec@risingtidesent.com`)
