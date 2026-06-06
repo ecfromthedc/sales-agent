@@ -1,0 +1,11 @@
+node_modules/
+.dev.vars
+.env
+.wrangler/
+dist/
+.secrets/
+*.log
+scripts/gap_pipeline/out/cache/
+scripts/gap_pipeline/db/csv/
+.venv/
+__pycache__/
