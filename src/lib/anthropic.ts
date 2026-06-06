@@ -20,7 +20,7 @@ const API_VERSION = "2023-06-01";
 const MODEL_BRIEF = "claude-sonnet-4-5-20250929";  // alias to current Sonnet 4.6
 const MODEL_PITCH = "claude-opus-4-5-20250929";    // alias to current Opus 4.5
 
-interface MessagesResponse {
+export interface MessagesResponse {
   id: string;
   content: Array<{ type: string; text?: string }>;
   stop_reason: string;
@@ -74,7 +74,13 @@ export async function callClaude(
   return res.json() as Promise<MessagesResponse>;
 }
 
-function extractText(res: MessagesResponse): string {
+/**
+ * Pull the first text block out of a Claude Messages response. Returns the empty
+ * string when the response carries no text block (e.g. thinking-only or empty
+ * content). Single source of truth for Claude text extraction across all roles —
+ * callers that want trimmed output should `.trim()` at the call site.
+ */
+export function extractText(res: MessagesResponse): string {
   const textBlock = res.content.find((b) => b.type === "text" && b.text);
   return textBlock?.text ?? "";
 }

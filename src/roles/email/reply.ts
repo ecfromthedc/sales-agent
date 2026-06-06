@@ -22,6 +22,10 @@
 import type { Env } from "../../lib/env";
 // SALE-109: pull the shared Claude primitive through the cross-role barrel.
 import { callClaude } from "../../shared";
+// SALE-124: extractText is the single shared Claude text-extraction helper,
+// owned by lib/anthropic alongside callClaude. Imported directly (it is not on
+// the src/shared barrel, whose surface is locked to the core primitives).
+import { extractText } from "../../lib/anthropic";
 // Draft-only Gmail write (SALE-63). NOTE: there is intentionally NO send import
 // here — `createGmailDraft` is the only Gmail-write primitive this module ever
 // touches, and it calls `users.drafts.create` exclusively.
@@ -103,14 +107,6 @@ function toReplySubject(subject: string): string {
   return `Re: ${s}`;
 }
 
-/** Pull the first text block out of a Claude Messages response. */
-function extractText(res: {
-  content: Array<{ type: string; text?: string }>;
-}): string {
-  const block = res.content.find((b) => b.type === "text" && b.text);
-  return (block?.text ?? "").trim();
-}
-
 /**
  * Compose a reply DRAFT for an `action_required` message. Calls the SHARED
  * {@link callClaude} with {@link buildReplyPrompt} and returns the draft fields.
@@ -137,7 +133,10 @@ export async function composeReplyDraft(
   return {
     to: msg.from,
     subject: toReplySubject(msg.subject),
-    body: extractText(res),
+    // Trim here (not in the shared helper) so reply bodies stay whitespace-clean
+    // without changing the lib callers (composeBrief/Pitch/Proposal) that rely
+    // on the untrimmed text. Preserves SALE-124's pre-dedupe behavior exactly.
+    body: extractText(res).trim(),
   };
 }
 
