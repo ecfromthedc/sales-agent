@@ -1,37 +1,19 @@
+// Cross-Worker dedup (SALE-132): Henry's Google OAuth refresh-token exchange now
+// lives in exactly one place — the shared `getGoogleAccessToken` broker (SALE-108,
+// Env-decoupled in SALE-129, takes a minimal `GoogleAuthEnv { GMAIL_OAUTH_CLIENT_ID,
+// GMAIL_OAUTH_CLIENT_SECRET, GMAIL_OAUTH_REFRESH_TOKEN }`). Henry's `Env` is a
+// structural superset, so callers pass `env` unchanged. Behavior is preserved:
+// same token endpoint (oauth2.googleapis.com/token), same grant_type=refresh_token
+// and client_id/secret/refresh_token field set, in-memory cached token reuse. The
+// only difference from Henry's prior local fn is the cache pre-expiry margin
+// (shared: 5 min; Henry's was 60 s) — both are valid refresh semantics. Imported
+// directly (NOT the `../../../src/shared` barrel) to avoid pulling in unrelated
+// shared deps.
+import { getGoogleAccessToken } from '../../../src/integrations/google-auth';
 import type { Env } from '../lib/env';
 
-interface GmailTokens {
-  access_token: string;
-  expires_at: number;
-}
-
-let gmailTokenCache: GmailTokens | null = null;
-
 async function getGmailToken(env: Env): Promise<string> {
-  if (gmailTokenCache && Date.now() < gmailTokenCache.expires_at) {
-    return gmailTokenCache.access_token;
-  }
-
-  const response = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: env.GMAIL_OAUTH_CLIENT_ID,
-      client_secret: env.GMAIL_OAUTH_CLIENT_SECRET,
-      refresh_token: env.GMAIL_OAUTH_REFRESH_TOKEN,
-      grant_type: 'refresh_token',
-    }),
-  });
-
-  if (!response.ok) throw new Error(`Gmail OAuth refresh failed: ${response.status}`);
-  const data = (await response.json()) as { access_token: string; expires_in: number };
-
-  gmailTokenCache = {
-    access_token: data.access_token,
-    expires_at: Date.now() + (data.expires_in - 60) * 1000,
-  };
-
-  return data.access_token;
+  return getGoogleAccessToken(env);
 }
 
 /**
