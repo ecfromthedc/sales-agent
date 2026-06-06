@@ -15,7 +15,9 @@
  */
 
 import type { Env } from "../lib/env";
-import { getGoogleAccessToken } from "./google-auth";
+// SALE-109: import the auth primitive via the shared barrel (cross-role surface)
+// rather than reaching into ./google-auth directly.
+import { getGoogleAccessToken } from "../shared";
 
 export interface MeetTranscriptFile {
   id: string;
