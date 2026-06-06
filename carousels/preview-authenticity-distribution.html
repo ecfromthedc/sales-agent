@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RT Carousel — Authenticity Is Distribution</title>
+  <style>
+    :root{
+      --rt-paper:#0B0710; --rt-paper-2:#140A1C; --rt-ink:#F3EAD4; --rt-mute:rgba(243,234,212,.62);
+      --rt-rule:rgba(243,234,212,.22); --rt-violet:#8500D7; --rt-magenta:#E100C3;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;padding:24px;background:#09060d;color:var(--rt-ink);font-family:Inter,system-ui,sans-serif}
+    h1{margin:0 0 6px;font-size:20px}
+    .meta{opacity:.8;margin:0 0 18px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+    .shell{--s:.34;width:calc(1080px * var(--s));height:calc(1350px * var(--s));border:1px solid #2b2137;border-radius:12px;overflow:hidden;background:#000;position:relative}
+    .slide{position:relative;width:1080px;height:1350px;transform:scale(var(--s));transform-origin:top left;background:radial-gradient(900px 720px at 50% 78%, rgba(133,0,215,.46), transparent 70%),radial-gradient(820px 640px at 16% 92%, rgba(225,0,195,.26), transparent 70%),var(--rt-paper);padding:54px 60px}
+    .slide::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(to bottom, transparent 0 2px, rgba(255,255,255,.04) 2px 3px);mix-blend-mode:overlay;opacity:.18;pointer-events:none}
+    .slide::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 240px rgba(0,0,0,.72);pointer-events:none}
+    .mast{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--rt-rule);font:600 14px/1.2 "JetBrains Mono",monospace;letter-spacing:.28em;text-transform:uppercase;color:var(--rt-mute)}
+    .kicker{margin-top:120px;font:600 15px/1.2 "JetBrains Mono",monospace;letter-spacing:.3em;text-transform:uppercase;color:var(--rt-mute)}
+    .hero{margin:30px 0 26px;font:900 138px/.88 "Archivo Black","Anton",sans-serif;text-transform:uppercase;letter-spacing:-.02em;max-width:960px}
+    .accent{background:linear-gradient(180deg,#F3EAD4 0%,#EAC9FF 56%,#8500D7 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .lede{max-width:840px;font:500 38px/1.32 "Bodoni Moda","Playfair Display",serif;color:#e9dcc0}
+    .stamp{position:absolute;right:74px;top:470px;border:2px solid #c9a85f;color:#c9a85f;padding:12px 18px;font:700 22px/1 "JetBrains Mono",monospace;transform:rotate(-8deg);text-transform:uppercase;letter-spacing:.08em}
+    .foot{position:absolute;left:60px;right:60px;bottom:56px;padding-top:14px;border-top:1px solid var(--rt-rule);display:flex;justify-content:space-between;font:600 13px/1.2 "JetBrains Mono",monospace;letter-spacing:.22em;text-transform:uppercase;color:var(--rt-mute)}
+    .refbar{margin-top:24px;padding:18px;border:1px dashed var(--rt-rule);border-radius:12px;color:var(--rt-mute);font:500 12.5px/1.5 "JetBrains Mono",monospace;max-width:520px}
+    .refbar b{color:var(--rt-ink)}
+  </style>
+</head>
+<body>
+  <h1>Vol. 07 — Authenticity Is Distribution</h1>
+  <p class="meta">Editorial single-slide. Grid anchor. 1080×1350. Industry intelligence / positioning.</p>
+
+  <div class="grid">
+    <div class="shell"><section class="slide">
+      <header class="mast"><span>THE MIDNIGHT PRESS</span><span>VOL. 07</span></header>
+      <div class="kicker">§ Field Note — The AI Era</div>
+      <h2 class="hero">Authenticity is now a <span class="accent">distribution</span> strategy.</h2>
+      <p class="lede">The feed merged ads and posts into one ranked stream. The only edge left is content that feels human at machine scale.</p>
+      <div class="stamp">Field Note</div>
+      <footer class="foot"><span>@risingtides.ent</span><span>editorial / vol. 07</span></footer>
+    </section></div>
+  </div>
+
+  <div class="refbar">
+    <b>SOURCES</b> · Hormozi — merged ad/content feed (Alexandria: Content &amp; Ads Algorithm Convergence) · RT positioning thesis — authenticity as a distribution lever in the AI era (qualitative)
+  </div>
+</body>
+</html>

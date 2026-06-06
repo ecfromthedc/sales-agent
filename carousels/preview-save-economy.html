@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RT Carousel — Save Economy</title>
+  <style>
+    :root{
+      --rt-paper:#0B0710; --rt-ink:#F3EAD4; --rt-mute:rgba(243,234,212,.62);
+      --rt-rule:rgba(243,234,212,.22); --rt-violet:#8500D7; --rt-magenta:#E100C3;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;padding:24px;background:#09060d;color:var(--rt-ink);font-family:Inter,system-ui,sans-serif}
+    h1{margin:0 0 6px;font-size:20px}
+    .meta{opacity:.8;margin:0 0 18px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+    .shell{--s:.26;width:calc(1080px * var(--s));height:calc(1350px * var(--s));border:1px solid #2b2137;border-radius:12px;overflow:hidden;background:#000;position:relative}
+    .slide{position:relative;width:1080px;height:1350px;transform:scale(var(--s));transform-origin:top left;background:radial-gradient(800px 650px at 18% 14%, rgba(225,0,195,.4), transparent 70%),radial-gradient(900px 700px at 88% 86%, rgba(133,0,215,.32), transparent 70%),var(--rt-paper);padding:54px 60px}
+    .slide::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(to bottom, transparent 0 2px, rgba(255,255,255,.04) 2px 3px);mix-blend-mode:overlay;opacity:.18;pointer-events:none}
+    .slide::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 240px rgba(0,0,0,.72);pointer-events:none}
+    .mast{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--rt-rule);font:600 14px/1.2 "JetBrains Mono",monospace;letter-spacing:.28em;text-transform:uppercase;color:var(--rt-mute)}
+    .kicker{margin-top:36px;font:600 14px/1.2 "JetBrains Mono",monospace;letter-spacing:.24em;text-transform:uppercase;color:var(--rt-mute)}
+    .hero{margin:22px 0 14px;font:900 134px/.88 "Archivo Black","Anton",sans-serif;text-transform:uppercase;letter-spacing:-.02em}
+    .accent{background:linear-gradient(180deg,#F3EAD4 0%,#EAC9FF 56%,#8500D7 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .lede{max-width:880px;font:500 34px/1.28 "Bodoni Moda","Playfair Display",serif;color:#e9dcc0}
+    .foot{position:absolute;left:60px;right:60px;bottom:56px;padding-top:14px;border-top:1px solid var(--rt-rule);display:flex;justify-content:space-between;font:600 13px/1.2 "JetBrains Mono",monospace;letter-spacing:.22em;text-transform:uppercase;color:var(--rt-mute)}
+    .body{margin-top:34px;display:grid;gap:20px;max-width:860px}
+    .body p{margin:0;font:500 40px/1.25 "Bodoni Moda","Playfair Display",serif}
+    .bignum{font:900 380px/.78 "Archivo Black","Anton",sans-serif;letter-spacing:-.04em;line-height:.78}
+    .pct{font:600 38px/1 "JetBrains Mono",monospace;letter-spacing:.04em;margin-top:14px;color:var(--rt-mute)}
+    .refbar{margin-top:24px;padding:18px;border:1px dashed var(--rt-rule);border-radius:12px;color:var(--rt-mute);font:500 12.5px/1.5 "JetBrains Mono",monospace}
+    .refbar b{color:var(--rt-ink)}
+  </style>
+</head>
+<body>
+  <h1>Vol. 03 — The Save Economy</h1>
+  <p class="meta">Hook → Build → Payoff → CTA. 4 slides, 1080×1350.</p>
+
+  <div class="grid">
+    <div class="shell"><section class="slide">
+      <header class="mast"><span>THE MIDNIGHT PRESS</span><span>VALUE 01/04</span></header>
+      <div class="kicker">Hook</div>
+      <h2 class="hero">Your likes are <span class="accent">lying</span> to you.</h2>
+      <p class="lede">A liked post is forgettable. A saved one is a return ticket.</p>
+      <footer class="foot"><span>@risingtides.ent</span><span>swipe →</span></footer>
+    </section></div>
+
+    <div class="shell"><section class="slide">
+      <header class="mast"><span>THE MIDNIGHT PRESS</span><span>VALUE 02/04</span></header>
+      <div class="kicker">Build</div>
+      <div class="body">
+        <p>Likes = <span class="accent">vanity.</span></p>
+        <p>Saves = <span class="accent">signal.</span> They say "I'll come back."</p>
+        <p>That's the unit IG and TikTok actually weight.</p>
+      </div>
+      <footer class="foot"><span>@risingtides.ent</span><span>build</span></footer>
+    </section></div>
+
+    <div class="shell"><section class="slide">
+      <header class="mast"><span>THE MIDNIGHT PRESS</span><span>VALUE 03/04</span></header>
+      <div class="kicker">Payoff</div>
+      <div class="bignum accent">24%</div>
+      <p class="pct">SAVE-TO-LIKE RATIO</p>
+      <p class="lede" style="margin-top:18px">The threshold where the algorithm starts pushing for you. RT's top-quartile posts run 24–38%.</p>
+      <footer class="foot"><span>@risingtides.ent</span><span>receipts</span></footer>
+    </section></div>
+
+    <div class="shell"><section class="slide">
+      <header class="mast"><span>THE MIDNIGHT PRESS</span><span>VALUE 04/04</span></header>
+      <div class="kicker">CTA</div>
+      <h2 class="hero">Audit your <span class="accent">last 10.</span></h2>
+      <p class="lede">DM us the grid · we'll mark which ones earned their save.</p>
+      <footer class="foot"><span>@risingtides.ent</span><span>end / vol. 03</span></footer>
+    </section></div>
+  </div>
+
+  <div class="refbar">
+    <b>SOURCES</b> · TikTok 2024 ranking signals (completion + saves dominate likes) · Instagram Reels distribution lift from saves (Meta Creator docs) · RT portfolio: top-quartile save:like ratio 24–38% (internal campaign analytics)
+  </div>
+</body>
+</html>

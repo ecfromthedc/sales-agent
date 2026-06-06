@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RT Carousel — Production Budget Kills Reach (vol. 00)</title>
+  <style>
+/* Midnight Press — inline carousel styles.
+   Self-contained: no @import to external stylesheets, only Google Fonts.
+   1080x1350 IG carousel artboards rendered inside .shell with scale transform. */
+
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Bodoni+Moda:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&family=Kalam:wght@400;700&display=swap');
+
+:root {
+  --rt-paper:   #0B0710;
+  --rt-paper-2: #140A1C;
+  --rt-ink:     #F3EAD4;
+  --rt-ink-2:   #D9CEB4;
+  --rt-mute:    rgba(243,234,212,0.62);
+  --rt-rule:    rgba(243,234,212,0.22);
+  --rt-violet:  #8500D7;
+  --rt-magenta: #E100C3;
+  --rt-accent:  #C9A85F;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 24px;
+  background: #09060d;
+  color: var(--rt-ink);
+  font-family: 'Bodoni Moda', 'Playfair Display', Georgia, serif;
+}
+
+h1.page-title {
+  margin: 0 0 6px;
+  font: 600 20px/1.2 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--rt-ink);
+}
+
+p.page-meta {
+  opacity: 0.7;
+  margin: 0 0 18px;
+  font: 400 13px/1.4 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rt-mute);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.shell {
+  --s: 0.26;
+  width: calc(1080px * var(--s));
+  height: calc(1350px * var(--s));
+  border: 1px solid #2b2137;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  position: relative;
+}
+
+.slide {
+  position: relative;
+  width: 1080px;
+  height: 1350px;
+  transform: scale(var(--s));
+  transform-origin: top left;
+  background: var(--bloom-bg, var(--rt-paper));
+  padding: 54px 60px;
+  font-family: 'Bodoni Moda', 'Playfair Display', Georgia, serif;
+}
+
+/* Scanlines */
+.slide::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(255,255,255,0.04) 2px 3px);
+  mix-blend-mode: overlay;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+/* Vignette */
+.slide::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 240px rgba(0,0,0,0.72);
+  pointer-events: none;
+}
+
+.mast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rt-rule);
+  font: 600 14px/1.2 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--rt-mute);
+  position: relative;
+  z-index: 2;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.kicker {
+  position: relative;
+  z-index: 2;
+  margin-top: 36px;
+  font: 600 14px/1.2 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--rt-mute);
+}
+
+.hero {
+  position: relative;
+  z-index: 2;
+  margin: 22px 0 14px;
+  font: 900 148px/0.86 'Archivo Black', 'Anton', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  color: var(--rt-ink);
+}
+
+.hero.short { font-size: 168px; }
+.hero.long  { font-size: 112px; }
+
+.accent {
+  background: linear-gradient(180deg, #F3EAD4 0%, #EAC9FF 56%, #8500D7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.lede {
+  position: relative;
+  z-index: 2;
+  max-width: 880px;
+  font: 500 34px/1.28 'Bodoni Moda', 'Playfair Display', Georgia, serif;
+  color: #e9dcc0;
+}
+
+.body {
+  position: relative;
+  z-index: 2;
+  margin-top: 34px;
+  display: grid;
+  gap: 20px;
+  max-width: 860px;
+}
+
+.body p {
+  margin: 0;
+  font: 500 40px/1.25 'Bodoni Moda', 'Playfair Display', Georgia, serif;
+  color: var(--rt-ink-2);
+}
+
+.num {
+  position: relative;
+  z-index: 2;
+  margin-top: 18px;
+  font: 900 260px/0.8 'Archivo Black', 'Anton', sans-serif;
+  opacity: 0.95;
+  letter-spacing: -0.04em;
+  color: var(--rt-ink);
+}
+
+.foot {
+  position: absolute;
+  left: 60px;
+  right: 60px;
+  bottom: 56px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rt-rule);
+  display: flex;
+  justify-content: space-between;
+  font: 600 13px/1.2 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--rt-mute);
+  z-index: 2;
+}
+
+/* Export mode: slides rendered at native 1080x1350 for PNG screenshotting.
+   No shell wrapper, no scale transform, no preview chrome. Each slide is a
+   full artboard the headless browser can capture via element-level screenshot. */
+body.export-mode {
+  margin: 0;
+  padding: 0;
+  background: var(--rt-paper);
+}
+
+body.export-mode .slide {
+  transform: none;
+  transform-origin: initial;
+  display: block;
+  margin: 0;
+}
+
+  </style>
+</head>
+<body>
+  <h1 class="page-title">Production Budget Kills Reach · vol. 00</h1>
+  <p class="page-meta">value carousel · seed: take · 4 slides</p>
+  <div class="grid">
+    <div class="shell">
+      <section class="slide" style="--bloom-bg: radial-gradient(800px 650px at 82% 12%, rgba(133,0,215,0.45), transparent 70%), radial-gradient(900px 700px at 14% 88%, rgba(225,0,195,0.25), transparent 70%), #0B0710;">
+        <header class="mast">
+          <div class="brand"><span>THE MIDNIGHT PRESS</span></div>
+          <span>VALUE 01/04</span>
+        </header>
+        <div class="kicker">Hook</div>
+        <h2 class="hero long">your budget is the reason nobody heard it</h2>
+        <p class="lede">The merged feed can't tell a music video from a car commercial. If yours looks expensive, it gets <span class="accent">buried</span> with the ads.</p>
+        <footer class="foot">
+          <span>@risingtides.ent</span>
+          <span>swipe →</span>
+        </footer>
+      </section>
+    </div>
+
+    <div class="shell">
+      <section class="slide" style="--bloom-bg: radial-gradient(800px 650px at 82% 12%, rgba(133,0,215,0.45), transparent 70%), radial-gradient(900px 700px at 14% 88%, rgba(225,0,195,0.25), transparent 70%), #0B0710;">
+        <header class="mast">
+          <div class="brand"><span>THE MIDNIGHT PRESS</span></div>
+          <span>VALUE 02/04</span>
+        </header>
+        <div class="kicker">Build</div>
+        <div class="num">01</div>
+        <div class="body">
+          <p>sold is the new shadow ban</p>
+          <p>The feed runs <span class="accent">one question</span> on every upload: is this content or a placement? High production values tip the answer. The algorithm reroutes accordingly. Your reach pays the difference.</p>
+        </div>
+        <footer class="foot">
+          <span>@risingtides.ent</span>
+          <span>build</span>
+        </footer>
+      </section>
+    </div>
+
+    <div class="shell">
+      <section class="slide" style="--bloom-bg: radial-gradient(800px 650px at 82% 12%, rgba(133,0,215,0.45), transparent 70%), radial-gradient(900px 700px at 14% 88%, rgba(225,0,195,0.25), transparent 70%), #0B0710;">
+        <header class="mast">
+          <div class="brand"><span>THE MIDNIGHT PRESS</span></div>
+          <span>VALUE 03/04</span>
+        </header>
+        <div class="kicker">Payoff</div>
+        <h2 class="hero long">the song never needed a budget. it needed a signal.</h2>
+        <p class="lede">A clipper network, a raw vertical, a bedroom take — these move because they read <span class="accent">native</span>. The distribution was always the variable. If you can't name why it worked, you can't repeat it.</p>
+        <footer class="foot">
+          <span>@risingtides.ent</span>
+          <span>receipts</span>
+        </footer>
+      </section>
+    </div>
+
+    <div class="shell">
+      <section class="slide" style="--bloom-bg: radial-gradient(800px 650px at 82% 12%, rgba(133,0,215,0.45), transparent 70%), radial-gradient(900px 700px at 14% 88%, rgba(225,0,195,0.25), transparent 70%), #0B0710;">
+        <header class="mast">
+          <div class="brand"><span>THE MIDNIGHT PRESS</span></div>
+          <span>VALUE 04/04</span>
+        </header>
+        <div class="kicker">CTA</div>
+        <h2 class="hero long">what does your current upload look like to the feed?</h2>
+        <p class="lede">DM us the link. We'll tell you whether it reads like content or an ad — and where <span class="accent">the leak</span> is.</p>
+        <footer class="foot">
+          <span>@risingtides.ent</span>
+          <span>end / vol. 00</span>
+        </footer>
+      </section>
+    </div>
+
+  </div>
+</body>
+</html>
