@@ -7,6 +7,7 @@
  */
 
 import type { Env } from "../lib/env";
+import { apiFetch } from "../lib/http";
 
 /** Spotify client-credentials token endpoint. */
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -45,7 +46,10 @@ export async function getSpotifyToken(env: Env): Promise<string> {
   }
 
   const creds = btoa(`${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`);
-  const res = await fetch(SPOTIFY_TOKEN_URL, {
+  // apiFetch parses the JSON body and throws an HttpError (carrying the status)
+  // on a non-2xx response — same observable behavior as the manual fetch +
+  // !res.ok throw it replaces.
+  const j = await apiFetch<{ access_token: string; expires_in?: number }>(SPOTIFY_TOKEN_URL, {
     method: "POST",
     headers: {
       authorization: `Basic ${creds}`,
@@ -53,11 +57,6 @@ export async function getSpotifyToken(env: Env): Promise<string> {
     },
     body: "grant_type=client_credentials",
   });
-  if (!res.ok) {
-    throw new Error(`Spotify token exchange failed: ${res.status}`);
-  }
-
-  const j = (await res.json()) as { access_token: string; expires_in?: number };
   // Spotify returns expires_in in seconds; default to 1h if absent.
   const ttlMs = (j.expires_in ?? 3600) * 1000;
   cachedToken = {
