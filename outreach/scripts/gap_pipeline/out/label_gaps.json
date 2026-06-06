@@ -1,0 +1,2450 @@
+[
+  {
+    "label": "Cloverdale Records",
+    "canonical": "cloverdale",
+    "n_artists": 3,
+    "total_ml": 866032,
+    "artists": [
+      {
+        "name": "Sam Burchfield",
+        "ml": 493596,
+        "score": 73.0,
+        "window": "2026-05-29"
+      },
+      {
+        "name": "VISION ARCADE",
+        "ml": 172124,
+        "score": 65.0,
+        "window": "2026-05-08"
+      },
+      {
+        "name": "Max Alan",
+        "ml": 200312,
+        "score": 64.2,
+        "window": "2026-05-08"
+      }
+    ],
+    "best_score": 73.0,
+    "soonest_release": null
+  },
+  {
+    "label": "+1 Records",
+    "canonical": "1",
+    "n_artists": 3,
+    "total_ml": 654406,
+    "artists": [
+      {
+        "name": "Telescreens",
+        "ml": 80490,
+        "score": 78.8,
+        "window": "2026-06-12"
+      },
+      {
+        "name": "Phoenix James",
+        "ml": 95472,
+        "score": 73.8,
+        "window": "2026-05-27"
+      },
+      {
+        "name": "Coast Modern",
+        "ml": 478444,
+        "score": 51.8,
+        "window": "2021-07-30"
+      }
+    ],
+    "best_score": 78.8,
+    "soonest_release": "2026-06-12"
+  },
+  {
+    "label": "Anjunabeats",
+    "canonical": "anjunabeats",
+    "n_artists": 2,
+    "total_ml": 653167,
+    "artists": [
+      {
+        "name": "Braxton",
+        "ml": 239382,
+        "score": 78.0,
+        "window": "2026-06-05"
+      },
+      {
+        "name": "Eric Luttrell",
+        "ml": 413785,
+        "score": 59.2,
+        "window": "2026-04-15"
+      }
+    ],
+    "best_score": 78.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Boom.Records",
+    "canonical": "boomrecords",
+    "n_artists": 2,
+    "total_ml": 628391,
+    "artists": [
+      {
+        "name": "Zeke Bleu",
+        "ml": 347236,
+        "score": 73.0,
+        "window": "2026-05-22"
+      },
+      {
+        "name": "Computer Kill",
+        "ml": 281155,
+        "score": 51.8,
+        "window": "2026-01-16"
+      }
+    ],
+    "best_score": 73.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Handwritten Records",
+    "canonical": "handwritten",
+    "n_artists": 2,
+    "total_ml": 554079,
+    "artists": [
+      {
+        "name": "Rachel Bochner",
+        "ml": 63124,
+        "score": 78.8,
+        "window": "2026-06-05"
+      },
+      {
+        "name": "KiNG MALA",
+        "ml": 490955,
+        "score": 68.0,
+        "window": "2026-06-02"
+      }
+    ],
+    "best_score": 78.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Glassnote Music LLC",
+    "canonical": "glassnote",
+    "n_artists": 2,
+    "total_ml": 485397,
+    "artists": [
+      {
+        "name": "Tors",
+        "ml": 326264,
+        "score": 59.2,
+        "window": "2026-05-01"
+      },
+      {
+        "name": "bby",
+        "ml": 159133,
+        "score": 57.5,
+        "window": "2025-12-26"
+      }
+    ],
+    "best_score": 59.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Lazaro Records",
+    "canonical": "lazaro",
+    "n_artists": 1,
+    "total_ml": 599897,
+    "artists": [
+      {
+        "name": "Anthony Lazaro",
+        "ml": 599897,
+        "score": 68.0,
+        "window": "2026-05-29"
+      }
+    ],
+    "best_score": 68.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Not A Label",
+    "canonical": "not a label",
+    "n_artists": 1,
+    "total_ml": 596423,
+    "artists": [
+      {
+        "name": "Golden Cats",
+        "ml": 596423,
+        "score": 69.2,
+        "window": "2026-06-05"
+      }
+    ],
+    "best_score": 69.2,
+    "soonest_release": null
+  },
+  {
+    "label": "SIBLINGS DYSTOPIAN",
+    "canonical": "siblings dystopian",
+    "n_artists": 1,
+    "total_ml": 593203,
+    "artists": [
+      {
+        "name": "SR-71",
+        "ml": 593203,
+        "score": 51.8,
+        "window": "2024-08-22"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Mom+Pop Music",
+    "canonical": "mompop",
+    "n_artists": 1,
+    "total_ml": 583493,
+    "artists": [
+      {
+        "name": "Maya Hawke",
+        "ml": 583493,
+        "score": 64.2,
+        "window": "2026-05-06"
+      }
+    ],
+    "best_score": 64.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Art Kids",
+    "canonical": "art kids",
+    "n_artists": 1,
+    "total_ml": 563548,
+    "artists": [
+      {
+        "name": "Wilfred",
+        "ml": 563548,
+        "score": 51.8,
+        "window": "2024-10-25"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "TH3RD BRAIN",
+    "canonical": "th3rd brain",
+    "n_artists": 1,
+    "total_ml": 561845,
+    "artists": [
+      {
+        "name": "Marzi",
+        "ml": 561845,
+        "score": 68.0,
+        "window": "2026-05-15"
+      }
+    ],
+    "best_score": 68.0,
+    "soonest_release": null
+  },
+  {
+    "label": "AMK Distributed by Kartel Music Group",
+    "canonical": "amk distributed by kartel",
+    "n_artists": 1,
+    "total_ml": 553953,
+    "artists": [
+      {
+        "name": "Martin Luke Brown",
+        "ml": 553953,
+        "score": 68.0,
+        "window": "2026-05-29"
+      }
+    ],
+    "best_score": 68.0,
+    "soonest_release": null
+  },
+  {
+    "label": "EMI North",
+    "canonical": "emi north",
+    "n_artists": 1,
+    "total_ml": 545583,
+    "artists": [
+      {
+        "name": "Doves",
+        "ml": 545583,
+        "score": 56.8,
+        "window": "2025-11-14"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Domino",
+    "canonical": "domino",
+    "n_artists": 1,
+    "total_ml": 543020,
+    "artists": [
+      {
+        "name": "The Kills",
+        "ml": 543020,
+        "score": 56.8,
+        "window": "2024-09-20"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Dirty Hit",
+    "canonical": "dirty hit",
+    "n_artists": 1,
+    "total_ml": 540060,
+    "artists": [
+      {
+        "name": "Frost Children",
+        "ml": 540060,
+        "score": 59.2,
+        "window": "2026-04-08"
+      }
+    ],
+    "best_score": 59.2,
+    "soonest_release": null
+  },
+  {
+    "label": "REGAL",
+    "canonical": "regal",
+    "n_artists": 1,
+    "total_ml": 536076,
+    "artists": [
+      {
+        "name": "Kilu",
+        "ml": 536076,
+        "score": 51.8,
+        "window": "2026-03-20"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Ophelia",
+    "canonical": "ophelia",
+    "n_artists": 1,
+    "total_ml": 511046,
+    "artists": [
+      {
+        "name": "Trivecta",
+        "ml": 511046,
+        "score": 68.0,
+        "window": "2026-05-22"
+      }
+    ],
+    "best_score": 68.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Sunflower Records",
+    "canonical": "sunflower",
+    "n_artists": 1,
+    "total_ml": 504683,
+    "artists": [
+      {
+        "name": "Ebony Loren",
+        "ml": 504683,
+        "score": 51.8,
+        "window": "2025-11-14"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "End Times Music",
+    "canonical": "end times",
+    "n_artists": 1,
+    "total_ml": 499638,
+    "artists": [
+      {
+        "name": "Donovan Woods",
+        "ml": 499638,
+        "score": 51.8,
+        "window": "2026-03-13"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "The System",
+    "canonical": "system",
+    "n_artists": 1,
+    "total_ml": 499621,
+    "artists": [
+      {
+        "name": "quinnie",
+        "ml": 499621,
+        "score": 51.8,
+        "window": "2025-07-24"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "TwizzyPoor - Dapstrem Entertainment",
+    "canonical": "twizzypoor dapstrem",
+    "n_artists": 1,
+    "total_ml": 497036,
+    "artists": [
+      {
+        "name": "brakence",
+        "ml": 497036,
+        "score": 51.8,
+        "window": "2022-12-02"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Exhale",
+    "canonical": "exhale",
+    "n_artists": 1,
+    "total_ml": 496156,
+    "artists": [
+      {
+        "name": "BYORN",
+        "ml": 496156,
+        "score": 73.0,
+        "window": "2026-06-05"
+      }
+    ],
+    "best_score": 73.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Mashooriya Originals",
+    "canonical": "mashooriya originals",
+    "n_artists": 1,
+    "total_ml": 495277,
+    "artists": [
+      {
+        "name": "Rushil Aswal",
+        "ml": 495277,
+        "score": 68.0,
+        "window": "2026-05-23"
+      }
+    ],
+    "best_score": 68.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Revival Recordings",
+    "canonical": "revival",
+    "n_artists": 1,
+    "total_ml": 488287,
+    "artists": [
+      {
+        "name": "Alesana",
+        "ml": 488287,
+        "score": 51.8,
+        "window": "2018-03-30"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "This Never Happened",
+    "canonical": "this never happened",
+    "n_artists": 1,
+    "total_ml": 485195,
+    "artists": [
+      {
+        "name": "Robby East",
+        "ml": 485195,
+        "score": 68.0,
+        "window": "2026-05-19"
+      }
+    ],
+    "best_score": 68.0,
+    "soonest_release": null
+  },
+  {
+    "label": "ODO RECORDS",
+    "canonical": "odo",
+    "n_artists": 1,
+    "total_ml": 479498,
+    "artists": [
+      {
+        "name": "Stargate",
+        "ml": 479498,
+        "score": 56.8,
+        "window": "2025-11-01"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Faceless Records",
+    "canonical": "faceless",
+    "n_artists": 1,
+    "total_ml": 475536,
+    "artists": [
+      {
+        "name": "Faceless Strangers",
+        "ml": 475536,
+        "score": 68.0,
+        "window": "2026-05-15"
+      }
+    ],
+    "best_score": 68.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Gjenny Records distributed by Mick Music",
+    "canonical": "gjenny distributed by mick",
+    "n_artists": 1,
+    "total_ml": 473904,
+    "artists": [
+      {
+        "name": "Sumbuck",
+        "ml": 473904,
+        "score": 51.8,
+        "window": "2025-01-10"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "TBHG",
+    "canonical": "tbhg",
+    "n_artists": 1,
+    "total_ml": 468088,
+    "artists": [
+      {
+        "name": "Kelvyn Colt",
+        "ml": 468088,
+        "score": 51.8,
+        "window": "2026-02-27"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Rounder",
+    "canonical": "rounder",
+    "n_artists": 1,
+    "total_ml": 467157,
+    "artists": [
+      {
+        "name": "Anna Graves",
+        "ml": 467157,
+        "score": 64.2,
+        "window": "2026-05-01"
+      }
+    ],
+    "best_score": 64.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Hopeless Records",
+    "canonical": "hopeless",
+    "n_artists": 1,
+    "total_ml": 466995,
+    "artists": [
+      {
+        "name": "Melrose Avenue",
+        "ml": 466995,
+        "score": 59.2,
+        "window": "2026-05-08"
+      }
+    ],
+    "best_score": 59.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Free Flight Records",
+    "canonical": "free flight",
+    "n_artists": 1,
+    "total_ml": 464652,
+    "artists": [
+      {
+        "name": "Darren Kiely",
+        "ml": 464652,
+        "score": 64.2,
+        "window": "2026-04-17"
+      }
+    ],
+    "best_score": 64.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Wolf Music Ltd under exclusive licence to B-Unique Records",
+    "canonical": "wolf ltd under exclusive licence to bunique",
+    "n_artists": 1,
+    "total_ml": 449775,
+    "artists": [
+      {
+        "name": "Dave Lofts",
+        "ml": 449775,
+        "score": 73.0,
+        "window": "2026-05-29"
+      }
+    ],
+    "best_score": 73.0,
+    "soonest_release": null
+  },
+  {
+    "label": "7AM Records Ltd",
+    "canonical": "7am ltd",
+    "n_artists": 1,
+    "total_ml": 427993,
+    "artists": [
+      {
+        "name": "Orlando",
+        "ml": 427993,
+        "score": 51.8,
+        "window": "2026-03-04"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Cornelis Music",
+    "canonical": "cornelis",
+    "n_artists": 1,
+    "total_ml": 421673,
+    "artists": [
+      {
+        "name": "Typhoon",
+        "ml": 421673,
+        "score": 59.2,
+        "window": "2026-05-03"
+      }
+    ],
+    "best_score": 59.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Fool's Gold Records",
+    "canonical": "fools gold",
+    "n_artists": 1,
+    "total_ml": 420727,
+    "artists": [
+      {
+        "name": "The Rapture",
+        "ml": 420727,
+        "score": 56.8,
+        "window": "2016-11-11"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "FRVR International Holdings",
+    "canonical": "frvr international holdings",
+    "n_artists": 1,
+    "total_ml": 409529,
+    "artists": [
+      {
+        "name": "KARRAHBOOO",
+        "ml": 409529,
+        "score": 64.2,
+        "window": "2026-04-17"
+      }
+    ],
+    "best_score": 64.2,
+    "soonest_release": null
+  },
+  {
+    "label": "MDDN Records",
+    "canonical": "mddn",
+    "n_artists": 1,
+    "total_ml": 408549,
+    "artists": [
+      {
+        "name": "Carlie Hanson",
+        "ml": 408549,
+        "score": 56.8,
+        "window": "2025-11-07"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "22ND SENTRY",
+    "canonical": "22nd sentry",
+    "n_artists": 1,
+    "total_ml": 406601,
+    "artists": [
+      {
+        "name": "AHI",
+        "ml": 406601,
+        "score": 68.0,
+        "window": "2026-05-22"
+      }
+    ],
+    "best_score": 68.0,
+    "soonest_release": null
+  },
+  {
+    "label": "QCLG",
+    "canonical": "qclg",
+    "n_artists": 1,
+    "total_ml": 404865,
+    "artists": [
+      {
+        "name": "EJ Jones",
+        "ml": 404865,
+        "score": 56.8,
+        "window": "2026-01-30"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Pizzaslime Records",
+    "canonical": "pizzaslime",
+    "n_artists": 1,
+    "total_ml": 382845,
+    "artists": [
+      {
+        "name": "Devon Again",
+        "ml": 382845,
+        "score": 73.0,
+        "window": "2026-06-02"
+      }
+    ],
+    "best_score": 73.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Pretty Records",
+    "canonical": "pretty",
+    "n_artists": 1,
+    "total_ml": 381719,
+    "artists": [
+      {
+        "name": "XYL\u00d8",
+        "ml": 381719,
+        "score": 51.8,
+        "window": "2025-08-01"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Cult of Girls",
+    "canonical": "cult of girls",
+    "n_artists": 1,
+    "total_ml": 380761,
+    "artists": [
+      {
+        "name": "Zolita",
+        "ml": 380761,
+        "score": 59.2,
+        "window": "2026-05-13"
+      }
+    ],
+    "best_score": 59.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Dom Recs",
+    "canonical": "dom recs",
+    "n_artists": 1,
+    "total_ml": 377350,
+    "artists": [
+      {
+        "name": "Twin Shadow",
+        "ml": 377350,
+        "score": 51.8,
+        "window": "2025-11-20"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Sumerian Records",
+    "canonical": "sumerian",
+    "n_artists": 1,
+    "total_ml": 376135,
+    "artists": [
+      {
+        "name": "The Haunt",
+        "ml": 376135,
+        "score": 73.0,
+        "window": "2026-06-05"
+      }
+    ],
+    "best_score": 73.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Easy Eye Sound",
+    "canonical": "easy eye sound",
+    "n_artists": 1,
+    "total_ml": 373800,
+    "artists": [
+      {
+        "name": "Fai Laci",
+        "ml": 373800,
+        "score": 75.5,
+        "window": "2026-06-26"
+      }
+    ],
+    "best_score": 75.5,
+    "soonest_release": "2026-06-26"
+  },
+  {
+    "label": "Digital Dust",
+    "canonical": "digital dust",
+    "n_artists": 1,
+    "total_ml": 365569,
+    "artists": [
+      {
+        "name": "Lido",
+        "ml": 365569,
+        "score": 56.8,
+        "window": "2025-11-11"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Cloudkid",
+    "canonical": "cloudkid",
+    "n_artists": 1,
+    "total_ml": 364804,
+    "artists": [
+      {
+        "name": "Joey Myron",
+        "ml": 364804,
+        "score": 51.8,
+        "window": "2026-01-23"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "1916942 Records DK",
+    "canonical": "1916942 dk",
+    "n_artists": 1,
+    "total_ml": 357533,
+    "artists": [
+      {
+        "name": "The Highstool Prophets",
+        "ml": 357533,
+        "score": 51.8,
+        "window": "2026-03-26"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "S-Curve",
+    "canonical": "scurve",
+    "n_artists": 1,
+    "total_ml": 354621,
+    "artists": [
+      {
+        "name": "The Moss",
+        "ml": 354621,
+        "score": 59.2,
+        "window": "2026-04-24"
+      }
+    ],
+    "best_score": 59.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Tone Tree Music / Vulture Vulture",
+    "canonical": "tone tree / vulture vulture",
+    "n_artists": 1,
+    "total_ml": 349088,
+    "artists": [
+      {
+        "name": "Jill Andrews",
+        "ml": 349088,
+        "score": 51.8,
+        "window": "2025-03-27"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Rose Picker Music",
+    "canonical": "rose picker",
+    "n_artists": 1,
+    "total_ml": 347134,
+    "artists": [
+      {
+        "name": "Solon Holt",
+        "ml": 347134,
+        "score": 69.2,
+        "window": "2026-05-15"
+      }
+    ],
+    "best_score": 69.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Tedy",
+    "canonical": "tedy",
+    "n_artists": 1,
+    "total_ml": 339440,
+    "artists": [
+      {
+        "name": "Nathan Goshen",
+        "ml": 339440,
+        "score": 49.2,
+        "window": "2024-09-26"
+      }
+    ],
+    "best_score": 49.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Coup D'Etat Recordings / 10K Projects",
+    "canonical": "coup detat / 10k projects",
+    "n_artists": 1,
+    "total_ml": 326056,
+    "artists": [
+      {
+        "name": "Sam Short",
+        "ml": 326056,
+        "score": 59.2,
+        "window": "2026-05-01"
+      }
+    ],
+    "best_score": 59.2,
+    "soonest_release": null
+  },
+  {
+    "label": "SNSD Records",
+    "canonical": "snsd",
+    "n_artists": 1,
+    "total_ml": 324423,
+    "artists": [
+      {
+        "name": "Reo Cragun",
+        "ml": 324423,
+        "score": 51.8,
+        "window": "2025-09-05"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Hallwood",
+    "canonical": "hallwood",
+    "n_artists": 1,
+    "total_ml": 313876,
+    "artists": [
+      {
+        "name": "Devvy Dub",
+        "ml": 313876,
+        "score": 64.2,
+        "window": "2026-04-09"
+      }
+    ],
+    "best_score": 64.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Powerhouse Music",
+    "canonical": "powerhouse",
+    "n_artists": 1,
+    "total_ml": 313366,
+    "artists": [
+      {
+        "name": "POWERS",
+        "ml": 313366,
+        "score": 56.8,
+        "window": "2025-04-10"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Dualtone Music Group",
+    "canonical": "dualtone",
+    "n_artists": 1,
+    "total_ml": 305282,
+    "artists": [
+      {
+        "name": "Gatlin",
+        "ml": 305282,
+        "score": 64.2,
+        "window": "2026-05-08"
+      }
+    ],
+    "best_score": 64.2,
+    "soonest_release": null
+  },
+  {
+    "label": "ASCEND4M",
+    "canonical": "ascend4m",
+    "n_artists": 1,
+    "total_ml": 296573,
+    "artists": [
+      {
+        "name": "Marfa",
+        "ml": 296573,
+        "score": 48.0,
+        "window": "2026-02-27"
+      }
+    ],
+    "best_score": 48.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Decca (UMO)",
+    "canonical": "decca",
+    "n_artists": 1,
+    "total_ml": 294298,
+    "artists": [
+      {
+        "name": "Jeff Goldblum & The Mildred Snitzer Orchestra",
+        "ml": 294298,
+        "score": 78.0,
+        "window": "2026-06-05"
+      }
+    ],
+    "best_score": 78.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Makeout Music Company",
+    "canonical": "makeout company",
+    "n_artists": 1,
+    "total_ml": 294224,
+    "artists": [
+      {
+        "name": "Aron Wright",
+        "ml": 294224,
+        "score": 51.8,
+        "window": "2026-01-01"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "LISTEN TO THE KIDS/Santa Anna",
+    "canonical": "listen to kids/santa anna",
+    "n_artists": 1,
+    "total_ml": 286732,
+    "artists": [
+      {
+        "name": "Steinza",
+        "ml": 286732,
+        "score": 56.8,
+        "window": "2026-02-06"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "HyperFixation Records",
+    "canonical": "hyperfixation",
+    "n_artists": 1,
+    "total_ml": 277280,
+    "artists": [
+      {
+        "name": "Harrison Boe",
+        "ml": 277280,
+        "score": 64.2,
+        "window": "2026-05-01"
+      }
+    ],
+    "best_score": 64.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Mobile1 Music",
+    "canonical": "mobile1",
+    "n_artists": 1,
+    "total_ml": 269292,
+    "artists": [
+      {
+        "name": "Eliad",
+        "ml": 269292,
+        "score": 51.8,
+        "window": "2026-02-09"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "9888601 Records DK",
+    "canonical": "9888601 dk",
+    "n_artists": 1,
+    "total_ml": 268952,
+    "artists": [
+      {
+        "name": "Dora Jar",
+        "ml": 268952,
+        "score": 51.8,
+        "window": "2025-09-12"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Indri Records",
+    "canonical": "indri",
+    "n_artists": 1,
+    "total_ml": 268859,
+    "artists": [
+      {
+        "name": "Beluga Lagoon",
+        "ml": 268859,
+        "score": 64.2,
+        "window": "2026-05-14"
+      }
+    ],
+    "best_score": 64.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Leg Graswell",
+    "canonical": "leg graswell",
+    "n_artists": 1,
+    "total_ml": 266214,
+    "artists": [
+      {
+        "name": "Greg Laswell",
+        "ml": 266214,
+        "score": 51.8,
+        "window": "2023-11-01"
+      }
+    ],
+    "best_score": 51.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Sound Factory Records",
+    "canonical": "sound factory",
+    "n_artists": 1,
+    "total_ml": 261531,
+    "artists": [
+      {
+        "name": "Jordi",
+        "ml": 261531,
+        "score": 56.8,
+        "window": "2026-01-16"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "If You Do It Right, LLC",
+    "canonical": "if you do it right",
+    "n_artists": 1,
+    "total_ml": 258809,
+    "artists": [
+      {
+        "name": "VEAUX",
+        "ml": 258809,
+        "score": 56.8,
+        "window": "2026-03-02"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "ATO Records",
+    "canonical": "ato",
+    "n_artists": 1,
+    "total_ml": 250258,
+    "artists": [
+      {
+        "name": "Briscoe",
+        "ml": 250258,
+        "score": 56.8,
+        "window": "2025-09-19"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Pacific Union Records",
+    "canonical": "pacific union",
+    "n_artists": 1,
+    "total_ml": 247656,
+    "artists": [
+      {
+        "name": "Straight White Teeth",
+        "ml": 247656,
+        "score": 73.0,
+        "window": "2026-05-29"
+      }
+    ],
+    "best_score": 73.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Records V2 LLC",
+    "canonical": "v2",
+    "n_artists": 1,
+    "total_ml": 245359,
+    "artists": [
+      {
+        "name": "Avery Lynch",
+        "ml": 245359,
+        "score": 56.8,
+        "window": "2026-02-13"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Sasha & Scotch Records Ltd.",
+    "canonical": "sasha & scotch ltd",
+    "n_artists": 1,
+    "total_ml": 243353,
+    "artists": [
+      {
+        "name": "Jawan",
+        "ml": 243353,
+        "score": 64.2,
+        "window": "2026-05-08"
+      }
+    ],
+    "best_score": 64.2,
+    "soonest_release": null
+  },
+  {
+    "label": "All Good Distribution",
+    "canonical": "all good distribution",
+    "n_artists": 1,
+    "total_ml": 242360,
+    "artists": [
+      {
+        "name": "Lauren Rose",
+        "ml": 242360,
+        "score": 56.8,
+        "window": "2026-02-27"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "baselineMUSIC",
+    "canonical": "baselinemusic",
+    "n_artists": 1,
+    "total_ml": 240652,
+    "artists": [
+      {
+        "name": "Jordan Hart",
+        "ml": 240652,
+        "score": 73.0,
+        "window": "2026-05-22"
+      }
+    ],
+    "best_score": 73.0,
+    "soonest_release": null
+  },
+  {
+    "label": "YBG Records",
+    "canonical": "ybg",
+    "n_artists": 1,
+    "total_ml": 239919,
+    "artists": [
+      {
+        "name": "The Stews",
+        "ml": 239919,
+        "score": 56.8,
+        "window": "2025-08-18"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "CH1M3RA",
+    "canonical": "ch1m3ra",
+    "n_artists": 1,
+    "total_ml": 238727,
+    "artists": [
+      {
+        "name": "Brothel in Belize",
+        "ml": 238727,
+        "score": 70.5,
+        "window": "2026-06-26"
+      }
+    ],
+    "best_score": 70.5,
+    "soonest_release": "2026-06-26"
+  },
+  {
+    "label": "Ritmo Urbano Music Group",
+    "canonical": "ritmo urbano",
+    "n_artists": 1,
+    "total_ml": 234827,
+    "artists": [
+      {
+        "name": "Xana",
+        "ml": 234827,
+        "score": 56.8,
+        "window": "2025-12-09"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Enroute Records",
+    "canonical": "enroute",
+    "n_artists": 1,
+    "total_ml": 234807,
+    "artists": [
+      {
+        "name": "Quentyn",
+        "ml": 234807,
+        "score": 78.0,
+        "window": "2026-06-05"
+      }
+    ],
+    "best_score": 78.0,
+    "soonest_release": null
+  },
+  {
+    "label": "SMACK Records, LLC",
+    "canonical": "smack",
+    "n_artists": 1,
+    "total_ml": 227934,
+    "artists": [
+      {
+        "name": "Jenna Davis",
+        "ml": 227934,
+        "score": 73.0,
+        "window": "2026-05-29"
+      }
+    ],
+    "best_score": 73.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Blues Production",
+    "canonical": "blues production",
+    "n_artists": 1,
+    "total_ml": 222295,
+    "artists": [
+      {
+        "name": "Malted Milk",
+        "ml": 222295,
+        "score": 56.8,
+        "window": "2026-03-06"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Theophonixx LLC",
+    "canonical": "theophonixx",
+    "n_artists": 1,
+    "total_ml": 216953,
+    "artists": [
+      {
+        "name": "Sebastian Mikael",
+        "ml": 216953,
+        "score": 68.0,
+        "window": "2026-05-22"
+      }
+    ],
+    "best_score": 68.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Zesty Records",
+    "canonical": "zesty",
+    "n_artists": 1,
+    "total_ml": 214569,
+    "artists": [
+      {
+        "name": "Blakey",
+        "ml": 214569,
+        "score": 78.0,
+        "window": "2026-06-05"
+      }
+    ],
+    "best_score": 78.0,
+    "soonest_release": null
+  },
+  {
+    "label": "SADC\u00d8RE",
+    "canonical": "sadcre",
+    "n_artists": 1,
+    "total_ml": 211312,
+    "artists": [
+      {
+        "name": "R\u00d8RY",
+        "ml": 211312,
+        "score": 59.2,
+        "window": "2026-09-04"
+      }
+    ],
+    "best_score": 59.2,
+    "soonest_release": "2026-09-04"
+  },
+  {
+    "label": "OPEN HAUS RECORDS",
+    "canonical": "open haus",
+    "n_artists": 1,
+    "total_ml": 201668,
+    "artists": [
+      {
+        "name": "Vice",
+        "ml": 201668,
+        "score": 68.0,
+        "window": "2026-05-15"
+      }
+    ],
+    "best_score": 68.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Forever Records",
+    "canonical": "forever",
+    "n_artists": 1,
+    "total_ml": 201162,
+    "artists": [
+      {
+        "name": "Domani",
+        "ml": 201162,
+        "score": 56.8,
+        "window": "2026-03-20"
+      }
+    ],
+    "best_score": 56.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Combustion Masters",
+    "canonical": "combustion masters",
+    "n_artists": 1,
+    "total_ml": 201075,
+    "artists": [
+      {
+        "name": "Payton Smith",
+        "ml": 201075,
+        "score": 69.2,
+        "window": "2026-05-15"
+      }
+    ],
+    "best_score": 69.2,
+    "soonest_release": null
+  },
+  {
+    "label": "Bandstand Presents",
+    "canonical": "bandstand presents",
+    "n_artists": 1,
+    "total_ml": 187236,
+    "artists": [
+      {
+        "name": "Benny Benack III",
+        "ml": 187236,
+        "score": 45.0,
+        "window": "2026-02-06"
+      }
+    ],
+    "best_score": 45.0,
+    "soonest_release": null
+  },
+  {
+    "label": "G Membership Rekords",
+    "canonical": "g membership rekords",
+    "n_artists": 1,
+    "total_ml": 184509,
+    "artists": [
+      {
+        "name": "Kt Foreign",
+        "ml": 184509,
+        "score": 60.0,
+        "window": "2026-05-08"
+      }
+    ],
+    "best_score": 60.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Sounds Good",
+    "canonical": "sounds good",
+    "n_artists": 1,
+    "total_ml": 178677,
+    "artists": [
+      {
+        "name": "Charlie Oriain",
+        "ml": 178677,
+        "score": 68.8,
+        "window": "2026-05-22"
+      }
+    ],
+    "best_score": 68.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Thirty Knots",
+    "canonical": "thirty knots",
+    "n_artists": 1,
+    "total_ml": 173071,
+    "artists": [
+      {
+        "name": "CHEEKS",
+        "ml": 173071,
+        "score": 57.5,
+        "window": "2026-04-03"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Artist Partner Group",
+    "canonical": "artist partner",
+    "n_artists": 1,
+    "total_ml": 172429,
+    "artists": [
+      {
+        "name": "asiris",
+        "ml": 172429,
+        "score": 57.5,
+        "window": "2026-02-27"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Lost In Dreams",
+    "canonical": "lost in dreams",
+    "n_artists": 1,
+    "total_ml": 169006,
+    "artists": [
+      {
+        "name": "Amidy",
+        "ml": 169006,
+        "score": 78.8,
+        "window": "2026-06-05"
+      }
+    ],
+    "best_score": 78.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Playmor",
+    "canonical": "playmor",
+    "n_artists": 1,
+    "total_ml": 164498,
+    "artists": [
+      {
+        "name": "Honeybear, the Band",
+        "ml": 164498,
+        "score": 60.0,
+        "window": "2026-04-17"
+      }
+    ],
+    "best_score": 60.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Gateway Records",
+    "canonical": "gateway",
+    "n_artists": 1,
+    "total_ml": 162736,
+    "artists": [
+      {
+        "name": "Sentury",
+        "ml": 162736,
+        "score": 65.0,
+        "window": "2026-05-01"
+      }
+    ],
+    "best_score": 65.0,
+    "soonest_release": null
+  },
+  {
+    "label": "St. Ella Records",
+    "canonical": "st ella",
+    "n_artists": 1,
+    "total_ml": 156599,
+    "artists": [
+      {
+        "name": "Ella Isaacson",
+        "ml": 156599,
+        "score": 57.5,
+        "window": "2026-03-13"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "one percent sound / Grey Area Records",
+    "canonical": "one percent sound / grey area",
+    "n_artists": 1,
+    "total_ml": 155590,
+    "artists": [
+      {
+        "name": "Ryan Price",
+        "ml": 155590,
+        "score": 68.8,
+        "window": "2026-05-29"
+      }
+    ],
+    "best_score": 68.8,
+    "soonest_release": null
+  },
+  {
+    "label": "UNLMTD Music Group",
+    "canonical": "unlmtd",
+    "n_artists": 1,
+    "total_ml": 155252,
+    "artists": [
+      {
+        "name": "Cartier J",
+        "ml": 155252,
+        "score": 65.0,
+        "window": "2026-05-01"
+      }
+    ],
+    "best_score": 65.0,
+    "soonest_release": null
+  },
+  {
+    "label": "MASSIE",
+    "canonical": "massie",
+    "n_artists": 1,
+    "total_ml": 154625,
+    "artists": [
+      {
+        "name": "MVSSIE",
+        "ml": 154625,
+        "score": 73.8,
+        "window": "2026-05-22"
+      }
+    ],
+    "best_score": 73.8,
+    "soonest_release": null
+  },
+  {
+    "label": "G23 Entertainment",
+    "canonical": "g23",
+    "n_artists": 1,
+    "total_ml": 150270,
+    "artists": [
+      {
+        "name": "Tina Parol",
+        "ml": 150270,
+        "score": 65.0,
+        "window": "2026-04-24"
+      }
+    ],
+    "best_score": 65.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Lambert Bros Records / Make Wake Records / Deep Roots Management.",
+    "canonical": "lambert bros / make wake / deep roots management",
+    "n_artists": 1,
+    "total_ml": 146411,
+    "artists": [
+      {
+        "name": "Alex Lambert",
+        "ml": 146411,
+        "score": 73.8,
+        "window": "2026-05-29"
+      }
+    ],
+    "best_score": 73.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Eddy Smith Music",
+    "canonical": "eddy smith",
+    "n_artists": 1,
+    "total_ml": 142987,
+    "artists": [
+      {
+        "name": "Eddy Smith & The 507",
+        "ml": 142987,
+        "score": 53.8,
+        "window": "2024-10-03"
+      }
+    ],
+    "best_score": 53.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Regime Music Group",
+    "canonical": "regime",
+    "n_artists": 1,
+    "total_ml": 132123,
+    "artists": [
+      {
+        "name": "Kate Morgan",
+        "ml": 132123,
+        "score": 73.8,
+        "window": "2026-05-15"
+      }
+    ],
+    "best_score": 73.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Lucille Records",
+    "canonical": "lucille",
+    "n_artists": 1,
+    "total_ml": 131624,
+    "artists": [
+      {
+        "name": "Lamont Landers",
+        "ml": 131624,
+        "score": 52.5,
+        "window": "2025-11-21"
+      }
+    ],
+    "best_score": 52.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Ginkgo Records",
+    "canonical": "ginkgo",
+    "n_artists": 1,
+    "total_ml": 124129,
+    "artists": [
+      {
+        "name": "Chance Emerson",
+        "ml": 124129,
+        "score": 57.5,
+        "window": "2025-12-12"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "ALPHABET RECORDS",
+    "canonical": "alphabet",
+    "n_artists": 1,
+    "total_ml": 123490,
+    "artists": [
+      {
+        "name": "Aspen Forest",
+        "ml": 123490,
+        "score": 57.5,
+        "window": "2026-03-20"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Frank Records, Inc",
+    "canonical": "frank",
+    "n_artists": 1,
+    "total_ml": 122059,
+    "artists": [
+      {
+        "name": "Donna Missal",
+        "ml": 122059,
+        "score": 57.5,
+        "window": "2025-09-05"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "EMI Recorded Music Australia Pty Ltd",
+    "canonical": "emi recorded australia pty ltd",
+    "n_artists": 1,
+    "total_ml": 118397,
+    "artists": [
+      {
+        "name": "Pamela.",
+        "ml": 118397,
+        "score": 67.5,
+        "window": "2026-07-10"
+      }
+    ],
+    "best_score": 67.5,
+    "soonest_release": "2026-07-10"
+  },
+  {
+    "label": "Vanishyah ENT",
+    "canonical": "vanishyah",
+    "n_artists": 1,
+    "total_ml": 118286,
+    "artists": [
+      {
+        "name": "Why G",
+        "ml": 118286,
+        "score": 65.0,
+        "window": "2026-04-24"
+      }
+    ],
+    "best_score": 65.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Cheersquad Records & Tapes",
+    "canonical": "cheersquad & tapes",
+    "n_artists": 1,
+    "total_ml": 113599,
+    "artists": [
+      {
+        "name": "Grace Mitchell",
+        "ml": 113599,
+        "score": 68.8,
+        "window": "2026-05-15"
+      }
+    ],
+    "best_score": 68.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Tone Tree Music",
+    "canonical": "tone tree",
+    "n_artists": 1,
+    "total_ml": 112377,
+    "artists": [
+      {
+        "name": "Victoria Bigelow",
+        "ml": 112377,
+        "score": 73.8,
+        "window": "2026-05-21"
+      }
+    ],
+    "best_score": 73.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Roundwound Media, LLC.",
+    "canonical": "roundwound media",
+    "n_artists": 1,
+    "total_ml": 111954,
+    "artists": [
+      {
+        "name": "Yam Haus",
+        "ml": 111954,
+        "score": 57.5,
+        "window": "2026-02-03"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Memory Music",
+    "canonical": "memory",
+    "n_artists": 1,
+    "total_ml": 111132,
+    "artists": [
+      {
+        "name": "Flycatcher",
+        "ml": 111132,
+        "score": 65.0,
+        "window": "2026-05-05"
+      }
+    ],
+    "best_score": 65.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Mandatory Music",
+    "canonical": "mandatory",
+    "n_artists": 1,
+    "total_ml": 108672,
+    "artists": [
+      {
+        "name": "Betty",
+        "ml": 108672,
+        "score": 65.0,
+        "window": "2026-05-01"
+      }
+    ],
+    "best_score": 65.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Good Grief Good Grief",
+    "canonical": "good grief good grief",
+    "n_artists": 1,
+    "total_ml": 104274,
+    "artists": [
+      {
+        "name": "Neighbour Andy",
+        "ml": 104274,
+        "score": 65.0,
+        "window": "2026-05-01"
+      }
+    ],
+    "best_score": 65.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Flower Moon Records",
+    "canonical": "flower moon",
+    "n_artists": 1,
+    "total_ml": 101997,
+    "artists": [
+      {
+        "name": "Azure Ray",
+        "ml": 101997,
+        "score": 52.5,
+        "window": "2021-12-13"
+      }
+    ],
+    "best_score": 52.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Paid Vacation",
+    "canonical": "paid vacation",
+    "n_artists": 1,
+    "total_ml": 100966,
+    "artists": [
+      {
+        "name": "BAYBE",
+        "ml": 100966,
+        "score": 57.5,
+        "window": "2024-12-06"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Plygrnd",
+    "canonical": "plygrnd",
+    "n_artists": 1,
+    "total_ml": 96231,
+    "artists": [
+      {
+        "name": "Samant",
+        "ml": 96231,
+        "score": 73.8,
+        "window": "2026-05-28"
+      }
+    ],
+    "best_score": 73.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Brown Liquor Music",
+    "canonical": "brown liquor",
+    "n_artists": 1,
+    "total_ml": 92904,
+    "artists": [
+      {
+        "name": "Kenny Sharp",
+        "ml": 92904,
+        "score": 65.0,
+        "window": "2026-04-24"
+      }
+    ],
+    "best_score": 65.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Solace Road Entertainment, LLC",
+    "canonical": "solace road",
+    "n_artists": 1,
+    "total_ml": 91973,
+    "artists": [
+      {
+        "name": "DOGMA SOCIETY",
+        "ml": 91973,
+        "score": 65.0,
+        "window": "2026-05-06"
+      }
+    ],
+    "best_score": 65.0,
+    "soonest_release": null
+  },
+  {
+    "label": "840 West Records / Cage Riot",
+    "canonical": "840 west / cage riot",
+    "n_artists": 1,
+    "total_ml": 85621,
+    "artists": [
+      {
+        "name": "Michele Lu",
+        "ml": 85621,
+        "score": 73.8,
+        "window": "2026-05-15"
+      }
+    ],
+    "best_score": 73.8,
+    "soonest_release": null
+  },
+  {
+    "label": "La Honda Records",
+    "canonical": "la honda",
+    "n_artists": 1,
+    "total_ml": 83756,
+    "artists": [
+      {
+        "name": "Kade Hoffman",
+        "ml": 83756,
+        "score": 57.5,
+        "window": "2025-10-03"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "8663522 Records DK2",
+    "canonical": "8663522 dk2",
+    "n_artists": 1,
+    "total_ml": 82089,
+    "artists": [
+      {
+        "name": "Tom High",
+        "ml": 82089,
+        "score": 57.5,
+        "window": "2026-02-27"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Marion-Lorraine Records",
+    "canonical": "marionlorraine",
+    "n_artists": 1,
+    "total_ml": 80388,
+    "artists": [
+      {
+        "name": "Katie Herzig",
+        "ml": 80388,
+        "score": 57.5,
+        "window": "2022-06-14"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "(dis)harmony",
+    "canonical": "harmony",
+    "n_artists": 1,
+    "total_ml": 78938,
+    "artists": [
+      {
+        "name": "The Takes",
+        "ml": 78938,
+        "score": 65.0,
+        "window": "2026-05-01"
+      }
+    ],
+    "best_score": 65.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Storage Unit Records",
+    "canonical": "storage unit",
+    "n_artists": 1,
+    "total_ml": 77846,
+    "artists": [
+      {
+        "name": "Caleb Hawley",
+        "ml": 77846,
+        "score": 65.0,
+        "window": "2026-04-24"
+      }
+    ],
+    "best_score": 65.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Nashville Harbor",
+    "canonical": "harbor",
+    "n_artists": 1,
+    "total_ml": 77844,
+    "artists": [
+      {
+        "name": "Hunter Flynn",
+        "ml": 77844,
+        "score": 73.8,
+        "window": "2026-05-22"
+      }
+    ],
+    "best_score": 73.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Ready Set Records",
+    "canonical": "ready set",
+    "n_artists": 1,
+    "total_ml": 71606,
+    "artists": [
+      {
+        "name": "Trent Dabbs",
+        "ml": 71606,
+        "score": 57.5,
+        "window": "2025-07-08"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Tenwick",
+    "canonical": "tenwick",
+    "n_artists": 1,
+    "total_ml": 70359,
+    "artists": [
+      {
+        "name": "Tomar and the FCs",
+        "ml": 70359,
+        "score": 57.5,
+        "window": "2025-09-19"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Who is Jack?",
+    "canonical": "who is jack",
+    "n_artists": 1,
+    "total_ml": 69537,
+    "artists": [
+      {
+        "name": "Jack Dean",
+        "ml": 69537,
+        "score": 57.5,
+        "window": "2026-03-04"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Mtn Laurel Recording Co.",
+    "canonical": "mtn laurel recording",
+    "n_artists": 1,
+    "total_ml": 59271,
+    "artists": [
+      {
+        "name": "KAZIMI",
+        "ml": 59271,
+        "score": 57.5,
+        "window": "2024-09-20"
+      }
+    ],
+    "best_score": 57.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Lost Chrrry Records",
+    "canonical": "lost chrrry",
+    "n_artists": 1,
+    "total_ml": 58177,
+    "artists": [
+      {
+        "name": "Sizzy Rocket",
+        "ml": 58177,
+        "score": 73.8,
+        "window": "2026-05-22"
+      }
+    ],
+    "best_score": 73.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Sign From The Universe Entertainment",
+    "canonical": "sign from universe",
+    "n_artists": 1,
+    "total_ml": 55312,
+    "artists": [
+      {
+        "name": "Sadie Fine",
+        "ml": 55312,
+        "score": 73.8,
+        "window": "2026-05-29"
+      }
+    ],
+    "best_score": 73.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Harmonix Factory",
+    "canonical": "harmonix factory",
+    "n_artists": 1,
+    "total_ml": 55296,
+    "artists": [
+      {
+        "name": "Sam Pounds",
+        "ml": 55296,
+        "score": 78.8,
+        "window": "2026-06-05"
+      }
+    ],
+    "best_score": 78.8,
+    "soonest_release": null
+  },
+  {
+    "label": "East of Dallas / Made Of Music",
+    "canonical": "east of dallas / made of",
+    "n_artists": 1,
+    "total_ml": 37108,
+    "artists": [
+      {
+        "name": "Ben Burgess",
+        "ml": 37108,
+        "score": 67.8,
+        "window": "2026-05-27"
+      }
+    ],
+    "best_score": 67.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Guin Records",
+    "canonical": "guin",
+    "n_artists": 1,
+    "total_ml": 36696,
+    "artists": [
+      {
+        "name": "Halo Kitsch",
+        "ml": 36696,
+        "score": 51.5,
+        "window": "2026-04-01"
+      }
+    ],
+    "best_score": 51.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Victory Pool Records",
+    "canonical": "victory pool",
+    "n_artists": 1,
+    "total_ml": 35219,
+    "artists": [
+      {
+        "name": "His His",
+        "ml": 35219,
+        "score": 67.8,
+        "window": "2026-05-19"
+      }
+    ],
+    "best_score": 67.8,
+    "soonest_release": null
+  },
+  {
+    "label": "For The Love Of Pop",
+    "canonical": "for love of pop",
+    "n_artists": 1,
+    "total_ml": 34282,
+    "artists": [
+      {
+        "name": "Sarah Thompson",
+        "ml": 34282,
+        "score": 51.5,
+        "window": "2025-11-20"
+      }
+    ],
+    "best_score": 51.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Red Bull Records Inc. / Wonderchild",
+    "canonical": "red bull / wonderchild",
+    "n_artists": 1,
+    "total_ml": 32969,
+    "artists": [
+      {
+        "name": "Chris LaRocca",
+        "ml": 32969,
+        "score": 59.0,
+        "window": "2026-05-08"
+      }
+    ],
+    "best_score": 59.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Transient Wolf Records",
+    "canonical": "transient wolf",
+    "n_artists": 1,
+    "total_ml": 32668,
+    "artists": [
+      {
+        "name": "Indigo Hush",
+        "ml": 32668,
+        "score": 67.8,
+        "window": "2026-05-22"
+      }
+    ],
+    "best_score": 67.8,
+    "soonest_release": null
+  },
+  {
+    "label": "ginmarc entertainment",
+    "canonical": "ginmarc",
+    "n_artists": 1,
+    "total_ml": 32561,
+    "artists": [
+      {
+        "name": "Moose Miller",
+        "ml": 32561,
+        "score": 51.5,
+        "window": "2025-05-30"
+      }
+    ],
+    "best_score": 51.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Propel Arts And Entertainment Company Limited",
+    "canonical": "propel arts and company limited",
+    "n_artists": 1,
+    "total_ml": 27647,
+    "artists": [
+      {
+        "name": "Lauren Tung",
+        "ml": 27647,
+        "score": 69.0,
+        "window": "2026-06-05"
+      }
+    ],
+    "best_score": 69.0,
+    "soonest_release": null
+  },
+  {
+    "label": "Wondyx Records",
+    "canonical": "wondyx",
+    "n_artists": 1,
+    "total_ml": 27616,
+    "artists": [
+      {
+        "name": "Nidal",
+        "ml": 27616,
+        "score": 59.0,
+        "window": "2026-05-13"
+      }
+    ],
+    "best_score": 59.0,
+    "soonest_release": null
+  },
+  {
+    "label": "PAT\u00d8N PLACE RECORDS",
+    "canonical": "patn place",
+    "n_artists": 1,
+    "total_ml": 26982,
+    "artists": [
+      {
+        "name": "Dani Marchio",
+        "ml": 26982,
+        "score": 51.5,
+        "window": "2026-01-22"
+      }
+    ],
+    "best_score": 51.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Anastasia Music, LLC",
+    "canonical": "anastasia",
+    "n_artists": 1,
+    "total_ml": 24576,
+    "artists": [
+      {
+        "name": "Anastasia Elliot",
+        "ml": 24576,
+        "score": 51.5,
+        "window": "2026-02-12"
+      }
+    ],
+    "best_score": 51.5,
+    "soonest_release": null
+  },
+  {
+    "label": "VDP Music",
+    "canonical": "vdp",
+    "n_artists": 1,
+    "total_ml": 23906,
+    "artists": [
+      {
+        "name": "Destined For Mars",
+        "ml": 23906,
+        "score": 67.8,
+        "window": "2026-05-15"
+      }
+    ],
+    "best_score": 67.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Ghost Drag Records",
+    "canonical": "ghost drag",
+    "n_artists": 1,
+    "total_ml": 18164,
+    "artists": [
+      {
+        "name": "Modern Cult",
+        "ml": 18164,
+        "score": 67.8,
+        "window": "2026-05-15"
+      }
+    ],
+    "best_score": 67.8,
+    "soonest_release": null
+  },
+  {
+    "label": "Easy Does It Records",
+    "canonical": "easy does it",
+    "n_artists": 1,
+    "total_ml": 17863,
+    "artists": [
+      {
+        "name": "Hollyy",
+        "ml": 17863,
+        "score": 51.5,
+        "window": "2025-12-12"
+      }
+    ],
+    "best_score": 51.5,
+    "soonest_release": null
+  },
+  {
+    "label": "Irregular Music",
+    "canonical": "irregular",
+    "n_artists": 1,
+    "total_ml": 13618,
+    "artists": [
+      {
+        "name": "Juliet Daniel",
+        "ml": 13618,
+        "score": 47.8,
+        "window": "2026-05-01"
+      }
+    ],
+    "best_score": 47.8,
+    "soonest_release": null
+  }
+]
