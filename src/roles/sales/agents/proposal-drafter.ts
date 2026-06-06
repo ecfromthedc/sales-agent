@@ -11,16 +11,16 @@
  * The Gmail "ready-to-send" draft is intentionally out of scope for now.
  */
 
-import type { Env } from "../lib/env";
+import type { Env } from "../../../lib/env";
 import {
   type Deal,
   attachProposalArtifact,
   getDealById,
   resolveDealForMeeting,
   saveTranscript,
-} from "../integrations/notion";
-import { composeProposal, type ProposalOutput } from "../lib/anthropic";
-import { renderProposalHtml } from "../integrations/proposal-render";
+} from "../../../integrations/notion";
+import { composeProposal, type ProposalOutput } from "../../../lib/anthropic";
+import { renderProposalHtml } from "../../../integrations/proposal-render";
 
 export interface ProposalDraftResult {
   proposal: ProposalOutput;

@@ -10,7 +10,7 @@
  */
 
 import type { Env } from "../lib/env";
-import { runPreCallBrief } from "../agents/pre-call-brief";
+import { runPreCallBrief } from "../roles/sales/agents/pre-call-brief";
 
 const CURSOR_KEY = "calendly-poll:cursor";
 const LOOKBACK_MS = 30 * 60 * 1000; // first run: look back 30 min
