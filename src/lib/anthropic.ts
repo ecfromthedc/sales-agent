@@ -20,14 +20,6 @@ const API_VERSION = "2023-06-01";
 const MODEL_BRIEF = "claude-sonnet-4-5-20250929";  // alias to current Sonnet 4.6
 const MODEL_PITCH = "claude-opus-4-5-20250929";    // alias to current Opus 4.5
 
-interface MessagesRequest {
-  model: string;
-  max_tokens: number;
-  system?: string;
-  messages: Array<{ role: "user" | "assistant"; content: string }>;
-  thinking?: { type: "enabled"; budget_tokens: number };
-}
-
 interface MessagesResponse {
   id: string;
   content: Array<{ type: string; text?: string }>;
@@ -35,7 +27,38 @@ interface MessagesResponse {
   usage: { input_tokens: number; output_tokens: number };
 }
 
-async function callClaude(body: MessagesRequest, env: Env): Promise<MessagesResponse> {
+/**
+ * Options for {@link callClaude} — the shared Anthropic Messages-API primitive.
+ * Every compose function routes through here so the raw HTTP call (endpoint,
+ * headers, anthropic-version, request body) lives in exactly one place.
+ */
+export interface CallClaudeOptions {
+  model: string;
+  maxTokens: number;
+  messages: Array<{ role: "user" | "assistant"; content: string }>;
+  system?: string;
+  thinking?: { type: "enabled"; budget_tokens: number };
+}
+
+/**
+ * Single shared core that performs the raw Anthropic Messages `fetch`. Workers-
+ * compatible (raw fetch, no SDK). Throws on non-2xx; otherwise returns the
+ * parsed Messages response.
+ */
+export async function callClaude(
+  env: Env,
+  { model, maxTokens, messages, system, thinking }: CallClaudeOptions,
+): Promise<MessagesResponse> {
+  const body: {
+    model: string;
+    max_tokens: number;
+    messages: Array<{ role: "user" | "assistant"; content: string }>;
+    system?: string;
+    thinking?: { type: "enabled"; budget_tokens: number };
+  } = { model, max_tokens: maxTokens, messages };
+  if (system !== undefined) body.system = system;
+  if (thinking !== undefined) body.thinking = thinking;
+
   const res = await fetch(API_URL, {
     method: "POST",
     headers: {
@@ -66,9 +89,9 @@ export async function composeBrief(input: {
   };
   enrichment: unknown;
 }, env: Env): Promise<string> {
-  const res = await callClaude({
+  const res = await callClaude(env, {
     model: MODEL_BRIEF,
-    max_tokens: 2048,
+    maxTokens: 2048,
     system: PRE_CALL_BRIEF_SYSTEM,
     messages: [
       {
@@ -76,7 +99,7 @@ export async function composeBrief(input: {
         content: `Invitee + enrichment data:\n\n${JSON.stringify(input, null, 2)}`,
       },
     ],
-  }, env);
+  });
   return extractText(res);
 }
 
@@ -188,9 +211,9 @@ export async function composePitch(input: {
   transcript: string;
   summary?: string;
 }, env: Env): Promise<PitchOutput> {
-  const res = await callClaude({
+  const res = await callClaude(env, {
     model: MODEL_PITCH,
-    max_tokens: 8192,
+    maxTokens: 8192,
     thinking: { type: "enabled", budget_tokens: 8000 },
     system: POST_CALL_PITCH_SYSTEM,
     messages: [
@@ -199,7 +222,7 @@ export async function composePitch(input: {
         content: `Deal ID: ${input.deal.id}\n\nTranscript:\n${input.transcript}\n\nSummary:\n${input.summary ?? "(none)"}`,
       },
     ],
-  }, env);
+  });
 
   const text = extractText(res);
   const parsed = extractJson<PitchOutput>(text);
@@ -235,9 +258,9 @@ export async function composeProposal(input: {
     ? `\n\n--- REFINEMENT REQUEST ---\nEric reviewed the proposal below and wants this change:\n"${input.refinement}"\n\nReturn the FULL updated JSON object. Apply the requested change. Keep everything else intact unless the change requires otherwise. Still honor every evidence rule — never fabricate to satisfy the edit; if the edit asks for data you don't have, put it in missingData.\n\nCurrent proposal JSON:\n${JSON.stringify(input.priorProposal ?? {}, null, 2)}`
     : "";
 
-  const res = await callClaude({
+  const res = await callClaude(env, {
     model: MODEL_PITCH,
-    max_tokens: 12000,
+    maxTokens: 12000,
     thinking: { type: "enabled", budget_tokens: 8000 },
     system: PROPOSAL_SYSTEM,
     messages: [
@@ -246,7 +269,7 @@ export async function composeProposal(input: {
         content: `Deal:\n${JSON.stringify(input.deal, null, 2)}\n\nPre-call brief, if available:\n${input.preCallBrief ?? "(none)"}\n\nTranscript:\n${input.transcript}\n\nPrior pitch output, if any:\n${input.priorPitch ? JSON.stringify(input.priorPitch, null, 2) : "(none)"}${refineBlock}`,
       },
     ],
-  }, env);
+  });
 
   const text = extractText(res);
   const parsed = extractJson<ProposalOutput>(text);
