@@ -5,7 +5,13 @@ node_modules/
 dist/
 .secrets/
 *.log
-scripts/gap_pipeline/out/cache/
-scripts/gap_pipeline/db/csv/
 .venv/
 __pycache__/
+
+# Generated pipeline data (SALE-114) — keep code, ignore generated DATA
+scripts/gap_pipeline/out/*.json
+scripts/gap_pipeline/out/cache/
+scripts/gap_pipeline/db/csv/
+scripts/gap_pipeline/db/backup/
+scripts/full_crm_export.json
+*.pdf
