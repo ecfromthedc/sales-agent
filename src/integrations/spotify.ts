@@ -6,8 +6,18 @@
  * Expected format: https://open.spotify.com/artist/{id}[?...]
  */
 
-import type { Env } from "../lib/env";
 import { apiFetch } from "../lib/http";
+
+/**
+ * Minimal structural env for the Spotify client-credentials flow. Narrowed from
+ * the concrete sales `Env` (SALE-129) so shared primitives don't transitively
+ * pull in the full Worker env. The sales `Env` is a structural superset, so
+ * every existing caller still satisfies this.
+ */
+export interface SpotifyEnv {
+  SPOTIFY_CLIENT_ID: string;
+  SPOTIFY_CLIENT_SECRET: string;
+}
 
 /** Spotify client-credentials token endpoint. */
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -40,7 +50,7 @@ export function __resetSpotifyTokenCache(): void {
  * then refreshes. Throws on a non-OK response from the token endpoint so callers
  * can decide how to handle auth/credential failures.
  */
-export async function getSpotifyToken(env: Env): Promise<string> {
+export async function getSpotifyToken(env: SpotifyEnv): Promise<string> {
   if (cachedToken && Date.now() < cachedToken.expiresAt) {
     return cachedToken.value;
   }
@@ -79,7 +89,7 @@ export interface SpotifyEnrichment {
 
 export async function enrichFromSpotify(
   url: string,
-  env: Env,
+  env: SpotifyEnv,
 ): Promise<SpotifyEnrichment | null> {
   const artistId = extractArtistId(url);
   if (!artistId) return null;
