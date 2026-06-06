@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RT Carousel Mockup — Midnight Press</title>
+  <link rel="stylesheet" href="./brand/_brand.css" />
+  <style>
+    :root{
+      --rt-paper:#0B0710; --rt-paper-2:#140A1C; --rt-ink:#F3EAD4; --rt-mute:rgba(243,234,212,.62);
+      --rt-rule:rgba(243,234,212,.22); --rt-violet:#8500D7; --rt-magenta:#E100C3;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;padding:24px;background:#09060d;color:var(--rt-ink);font-family:Inter,system-ui,sans-serif}
+    h1{margin:0 0 6px;font-size:20px}
+    .meta{opacity:.8;margin:0 0 18px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+    .shell{--s:.26;width:calc(1080px * var(--s));height:calc(1350px * var(--s));border:1px solid #2b2137;border-radius:12px;overflow:hidden;background:#000;position:relative}
+    .slide{position:relative;width:1080px;height:1350px;transform:scale(var(--s));transform-origin:top left;background:radial-gradient(800px 650px at 82% 12%, rgba(133,0,215,.45), transparent 70%),radial-gradient(900px 700px at 14% 88%, rgba(225,0,195,.25), transparent 70%),var(--rt-paper);padding:54px 60px}
+    .slide::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(to bottom, transparent 0 2px, rgba(255,255,255,.04) 2px 3px);mix-blend-mode:overlay;opacity:.18;pointer-events:none}
+    .slide::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 240px rgba(0,0,0,.72);pointer-events:none}
+    .mast{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--rt-rule);font:600 14px/1.2 "JetBrains Mono",monospace;letter-spacing:.28em;text-transform:uppercase;color:var(--rt-mute)}
+    .brand{display:flex;align-items:center;gap:14px}
+    .brand img{height:22px;opacity:.95}
+    .kicker{margin-top:36px;font:600 14px/1.2 "JetBrains Mono",monospace;letter-spacing:.24em;text-transform:uppercase;color:var(--rt-mute)}
+    .hero{margin:22px 0 14px;font:900 148px/.86 "Archivo Black","Anton",sans-serif;text-transform:uppercase;letter-spacing:-.02em}
+    .accent{background:linear-gradient(180deg,#F3EAD4 0%,#EAC9FF 56%,#8500D7 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .lede{max-width:880px;font:500 34px/1.28 "Bodoni Moda","Playfair Display",serif;color:#e9dcc0}
+    .foot{position:absolute;left:60px;right:60px;bottom:56px;padding-top:14px;border-top:1px solid var(--rt-rule);display:flex;justify-content:space-between;font:600 13px/1.2 "JetBrains Mono",monospace;letter-spacing:.22em;text-transform:uppercase;color:var(--rt-mute)}
+    .stamp{position:absolute;right:74px;top:458px;border:2px solid #c9a85f;color:#c9a85f;padding:12px 18px;font:700 22px/1 "JetBrains Mono",monospace;transform:rotate(-8deg);text-transform:uppercase;letter-spacing:.08em}
+    .body{margin-top:34px;display:grid;gap:20px;max-width:860px}
+    .body p{margin:0;font:500 40px/1.25 "Bodoni Moda","Playfair Display",serif}
+    .num{font:900 260px/.8 "Archivo Black","Anton",sans-serif;opacity:.95;letter-spacing:-.04em}
+  </style>
+</head>
+<body>
+  <h1>Rising Tides — Midnight Press Mockup</h1>
+  <p class="meta">Editorial (single-slide) + Value carousel (4 slides), preview-first HTML.</p>
+
+  <div class="grid">
+    <div class="shell">
+      <section class="slide">
+        <header class="mast">
+          <div class="brand"><img src="./brand/logos/logo-horizontal-white.svg" alt="Rising Tides" /><span>THE MIDNIGHT PRESS</span></div>
+          <span>VOL. 01</span>
+        </header>
+        <div class="kicker">§ 01 — case file</div>
+        <h2 class="hero">30K → <span class="accent">1.8M</span></h2>
+        <p class="lede">Mon Rovia listener growth. 12 months. 928M views across campaign assets.</p>
+        <div class="stamp">Verified</div>
+        <footer class="foot"><span>@risingtides.ent</span><span>editorial / 01</span></footer>
+      </section>
+    </div>
+
+    <div class="shell">
+      <section class="slide">
+        <header class="mast"><span>THE MIDNIGHT PRESS</span><span>VALUE 01/04</span></header>
+        <div class="kicker">Hook</div>
+        <h2 class="hero">Most artists post <span class="accent">songs</span> too early.</h2>
+        <p class="lede">You don’t need more content. You need pre-release curiosity.</p>
+        <footer class="foot"><span>@risingtides.ent</span><span>swipe →</span></footer>
+      </section>
+    </div>
+
+    <div class="shell">
+      <section class="slide">
+        <header class="mast"><span>THE MIDNIGHT PRESS</span><span>VALUE 02/04</span></header>
+        <div class="kicker">Build</div>
+        <div class="num">01</div>
+        <div class="body">
+          <p>Tease the <span class="accent">feeling</span>, not the file.</p>
+          <p>Use conflict-driven snippets: “we found the song. not the audience.”</p>
+        </div>
+        <footer class="foot"><span>@risingtides.ent</span><span>build</span></footer>
+      </section>
+    </div>
+
+    <div class="shell">
+      <section class="slide">
+        <header class="mast"><span>THE MIDNIGHT PRESS</span><span>VALUE 03/04</span></header>
+        <div class="kicker">Payoff</div>
+        <h2 class="hero">Curiosity lifts <span class="accent">saves</span>.</h2>
+        <p class="lede">High-performing evergreen pieces target save-to-like ratios above 24%.</p>
+        <footer class="foot"><span>@risingtides.ent</span><span>receipts</span></footer>
+      </section>
+    </div>
+
+    <div class="shell">
+      <section class="slide">
+        <header class="mast"><span>THE MIDNIGHT PRESS</span><span>VALUE 04/04</span></header>
+        <div class="kicker">CTA</div>
+        <h2 class="hero">DM us a <span class="accent">song</span>.</h2>
+        <p class="lede">We’ll map the hook arc before release day.</p>
+        <footer class="foot"><span>@risingtides.ent</span><span>end / vol. 01</span></footer>
+      </section>
+    </div>
+  </div>
+</body>
+</html>
