@@ -19,6 +19,19 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  carousels:
+    name: carousels cargo check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: carousels/agent
+      - name: cargo check
+        working-directory: carousels/agent
+        run: cargo check
+
   outreach:
     name: outreach typecheck
     runs-on: ubuntu-latest
