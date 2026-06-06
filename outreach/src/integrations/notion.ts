@@ -1,28 +1,14 @@
 import type { Env } from '../lib/env';
 import type { Artist, Label, Lead, OutreachDraft } from '../lib/types';
-
-const NOTION_API = 'https://api.notion.com/v1';
-const NOTION_VERSION = '2022-06-28';
-
-function headers(env: Env) {
-  return {
-    Authorization: `Bearer ${env.NOTION_API_KEY}`,
-    'Notion-Version': NOTION_VERSION,
-    'Content-Type': 'application/json',
-  };
-}
+import { notionFetch } from '../../../src/integrations/notion-transport';
 
 // --- Labels DB ---
 
 export async function getTrackedLabels(env: Env): Promise<Label[]> {
-  const response = await fetch(`${NOTION_API}/databases/${env.LABELS_DB_ID}/query`, {
+  const data = (await notionFetch(env, `/databases/${env.LABELS_DB_ID}/query`, {
     method: 'POST',
-    headers: headers(env),
-    body: JSON.stringify({ page_size: 100 }),
-  });
-
-  if (!response.ok) throw new Error(`Notion query failed: ${response.status}`);
-  const data = (await response.json()) as { results: Array<Record<string, unknown>> };
+    body: { page_size: 100 },
+  })) as { results: Array<Record<string, unknown>> };
 
   return data.results.map(pageToLabel);
 }
@@ -44,33 +30,25 @@ function pageToLabel(page: Record<string, unknown>): Label {
 // --- Artists DB ---
 
 export async function getArtistsByLabel(env: Env, labelName: string): Promise<Artist[]> {
-  const response = await fetch(`${NOTION_API}/databases/${env.ARTISTS_DB_ID}/query`, {
+  const data = (await notionFetch(env, `/databases/${env.ARTISTS_DB_ID}/query`, {
     method: 'POST',
-    headers: headers(env),
-    body: JSON.stringify({
+    body: {
       filter: {
         property: 'Label',
         rich_text: { equals: labelName },
       },
       page_size: 100,
-    }),
-  });
-
-  if (!response.ok) throw new Error(`Notion query failed: ${response.status}`);
-  const data = (await response.json()) as { results: Array<Record<string, unknown>> };
+    },
+  })) as { results: Array<Record<string, unknown>> };
 
   return data.results.map(pageToArtist);
 }
 
 export async function getAllArtists(env: Env): Promise<Artist[]> {
-  const response = await fetch(`${NOTION_API}/databases/${env.ARTISTS_DB_ID}/query`, {
+  const data = (await notionFetch(env, `/databases/${env.ARTISTS_DB_ID}/query`, {
     method: 'POST',
-    headers: headers(env),
-    body: JSON.stringify({ page_size: 100 }),
-  });
-
-  if (!response.ok) throw new Error(`Notion query failed: ${response.status}`);
-  const data = (await response.json()) as { results: Array<Record<string, unknown>> };
+    body: { page_size: 100 },
+  })) as { results: Array<Record<string, unknown>> };
 
   return data.results.map(pageToArtist);
 }
@@ -94,10 +72,9 @@ function pageToArtist(page: Record<string, unknown>): Artist {
 // --- Leads DB ---
 
 export async function createLead(env: Env, lead: Omit<Lead, 'id' | 'notionPageId'>): Promise<string> {
-  const response = await fetch(`${NOTION_API}/pages`, {
+  const data = (await notionFetch(env, `/pages`, {
     method: 'POST',
-    headers: headers(env),
-    body: JSON.stringify({
+    body: {
       parent: { database_id: env.LEADS_DB_ID },
       properties: {
         Name: { title: [{ text: { content: `${lead.artist.name} @ ${lead.label.name}` } }] },
@@ -109,41 +86,30 @@ export async function createLead(env: Env, lead: Omit<Lead, 'id' | 'notionPageId
           rich_text: [{ text: { content: lead.signals.map((s) => s.type).join(', ') } }],
         },
       },
-    }),
-  });
-
-  if (!response.ok) throw new Error(`Notion create failed: ${response.status}`);
-  const data = (await response.json()) as { id: string };
+    },
+  })) as { id: string };
   return data.id;
 }
 
 export async function getUnscoredLeads(env: Env): Promise<Lead[]> {
-  const response = await fetch(`${NOTION_API}/databases/${env.LEADS_DB_ID}/query`, {
+  const data = (await notionFetch(env, `/databases/${env.LEADS_DB_ID}/query`, {
     method: 'POST',
-    headers: headers(env),
-    body: JSON.stringify({
+    body: {
       filter: {
         property: 'Status',
         select: { equals: 'new' },
       },
       page_size: 50,
-    }),
-  });
-
-  if (!response.ok) throw new Error(`Notion query failed: ${response.status}`);
-  const data = (await response.json()) as { results: Array<Record<string, unknown>> };
+    },
+  })) as { results: Array<Record<string, unknown>> };
 
   return data.results.map(pageToLead);
 }
 
 export async function getLeadById(env: Env, pageId: string): Promise<Lead> {
-  const response = await fetch(`${NOTION_API}/pages/${pageId}`, {
+  const page = (await notionFetch(env, `/pages/${pageId}`, {
     method: 'GET',
-    headers: headers(env),
-  });
-
-  if (!response.ok) throw new Error(`Notion page fetch failed: ${response.status}`);
-  const page = (await response.json()) as Record<string, unknown>;
+  })) as Record<string, unknown>;
 
   return pageToLead(page);
 }
@@ -178,23 +144,21 @@ function pageToLead(page: Record<string, unknown>): Lead {
 }
 
 export async function updateLeadStatus(env: Env, pageId: string, status: Lead['status']): Promise<void> {
-  await fetch(`${NOTION_API}/pages/${pageId}`, {
+  await notionFetch(env, `/pages/${pageId}`, {
     method: 'PATCH',
-    headers: headers(env),
-    body: JSON.stringify({
+    body: {
       properties: {
         Status: { select: { name: status } },
       },
-    }),
+    },
   });
 }
 
 export async function saveOutreachDraft(env: Env, draft: OutreachDraft, leadPageId: string): Promise<void> {
   // Save to Outreach Log DB
-  await fetch(`${NOTION_API}/pages`, {
+  await notionFetch(env, `/pages`, {
     method: 'POST',
-    headers: headers(env),
-    body: JSON.stringify({
+    body: {
       parent: { database_id: env.OUTREACH_LOG_DB_ID },
       properties: {
         Name: { title: [{ text: { content: draft.subject } }] },
@@ -211,7 +175,7 @@ export async function saveOutreachDraft(env: Env, draft: OutreachDraft, leadPage
           },
         },
       ],
-    }),
+    },
   });
 
   // Update lead status
