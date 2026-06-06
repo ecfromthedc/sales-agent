@@ -15,6 +15,18 @@ import type { Env } from "../lib/env";
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
+/**
+ * Minimal structural env for {@link notionFetch} — the raw Notion transport
+ * primitive. Narrowed from the concrete sales `Env` (SALE-129) so shared
+ * primitives don't transitively pull in the full Worker env. The sales `Env`
+ * is a structural superset, so every existing caller still satisfies this.
+ * (DB-specific helpers below still take the full `Env` because they read the
+ * `NOTION_*_DB_ID` vars, which are out of this primitive's scope.)
+ */
+export interface NotionEnv {
+  NOTION_API_KEY: string;
+}
+
 export interface NotionFetchOptions {
   /** HTTP method. Defaults to "GET". */
   method?: string;
@@ -35,7 +47,7 @@ export interface NotionFetchOptions {
  * e.g. `getDealById` treats `notion_404_` as "not found" and returns null.
  */
 export async function notionFetch(
-  env: Env,
+  env: NotionEnv,
   path: string,
   opts: NotionFetchOptions = {},
 ): Promise<any> {

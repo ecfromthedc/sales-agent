@@ -24,8 +24,20 @@
  *     `HttpError` (status + body) on a non-2xx token response.
  */
 
-import type { Env } from "../lib/env";
 import { apiFetch } from "../lib/http";
+
+/**
+ * Minimal structural env for {@link getGoogleAccessToken} — exactly the OAuth
+ * fields the refresh-token exchange reads. Narrowed from the concrete sales
+ * `Env` (SALE-129) so shared primitives don't transitively pull in the full
+ * Worker env. The sales `Env` is a structural superset, so every existing
+ * caller still satisfies this.
+ */
+export interface GoogleAuthEnv {
+  GMAIL_OAUTH_CLIENT_ID: string;
+  GMAIL_OAUTH_CLIENT_SECRET: string;
+  GMAIL_OAUTH_REFRESH_TOKEN: string;
+}
 
 interface CachedToken {
   accessToken: string;
@@ -51,7 +63,7 @@ export function __resetGoogleTokenCache(): void {
  *
  * @throws {import("../lib/http").HttpError} when the token endpoint returns non-2xx.
  */
-export async function getGoogleAccessToken(env: Env): Promise<string> {
+export async function getGoogleAccessToken(env: GoogleAuthEnv): Promise<string> {
   const now = Date.now();
   if (memCache && memCache.expiresAt - 300_000 > now) {
     return memCache.accessToken;
