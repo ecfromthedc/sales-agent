@@ -17,17 +17,17 @@
  */
 
 import type { Env } from "./lib/env";
-import { handleCalendlyWebhook } from "./triggers/calendly-webhook";
-import { handleTranscriptWebhook } from "./triggers/transcript-webhook";
-import { handleManualRerun } from "./triggers/manual";
-import { pollTranscripts } from "./triggers/transcript-poll";
-import { pollCalendly } from "./triggers/calendly-poll";
-import { handleTestPreCall } from "./triggers/test";
-import { handleSmokeTest } from "./triggers/smoke";
+import { handleCalendlyWebhook } from "./roles/sales/triggers/calendly-webhook";
+import { handleTranscriptWebhook } from "./roles/sales/triggers/transcript-webhook";
+import { handleManualRerun } from "./roles/sales/triggers/manual";
+import { pollTranscripts } from "./roles/sales/triggers/transcript-poll";
+import { pollCalendly } from "./roles/sales/triggers/calendly-poll";
+import { handleTestPreCall } from "./roles/sales/triggers/test";
+import { handleSmokeTest } from "./roles/sales/triggers/smoke";
 import { readRunState, shapeStatus, recordRun, recordError } from "./lib/run-state";
-import { handleSlackInteraction } from "./triggers/slack-interactions";
-import { handleSlackEvent } from "./triggers/slack-events";
-import { handleFirefliesWebhook } from "./triggers/fireflies-webhook";
+import { handleSlackInteraction } from "./roles/sales/triggers/slack-interactions";
+import { handleSlackEvent } from "./roles/sales/triggers/slack-events";
+import { handleFirefliesWebhook } from "./roles/sales/triggers/fireflies-webhook";
 import { serveProposal } from "./triggers/proposal-public";
 
 const SERVICE = "rt-sales-call-agent";

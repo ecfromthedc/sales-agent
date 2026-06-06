@@ -9,9 +9,9 @@
  * the payload, verified against FIREFLIES_WEBHOOK_SECRET.
  */
 
-import type { Env } from "../lib/env";
-import { runProposalFromMeeting } from "../roles/sales/agents/proposal-drafter";
-import { verifyFirefliesSignature } from "../lib/proposal-security";
+import type { Env } from "../../../lib/env";
+import { runProposalFromMeeting } from "../agents/proposal-drafter";
+import { verifyFirefliesSignature } from "../../../lib/proposal-security";
 
 const FIREFLIES_API = "https://api.fireflies.ai/graphql";
 

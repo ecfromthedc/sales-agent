@@ -8,9 +8,9 @@
  * respond to Calendly fast and do the slow work in the background).
  */
 
-import type { Env } from "../lib/env";
-import { verifyCalendlySignature } from "../integrations/calendly";
-import { runPreCallBrief } from "../roles/sales/agents/pre-call-brief";
+import type { Env } from "../../../lib/env";
+import { verifyCalendlySignature } from "../../../integrations/calendly";
+import { runPreCallBrief } from "../agents/pre-call-brief";
 
 export async function handleCalendlyWebhook(
   req: Request,

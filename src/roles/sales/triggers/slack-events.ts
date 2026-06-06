@@ -10,9 +10,9 @@
  * Slack's v0 signing scheme + a 5-minute timestamp freshness window.
  */
 
-import type { Env } from "../lib/env";
-import { refineProposal } from "../roles/sales/agents/proposal-drafter";
-import { verifySlackRequest } from "../lib/slack-verify";
+import type { Env } from "../../../lib/env";
+import { refineProposal } from "../agents/proposal-drafter";
+import { verifySlackRequest } from "../../../lib/slack-verify";
 
 interface SlackEnvelope {
   type: "url_verification" | "event_callback";
