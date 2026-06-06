@@ -1,6 +1,9 @@
 /**
  * Gmail history search — finds past convos with a prospect's email or domain.
- * Uses the shared Google OAuth refresh token; same client as Drive.
+ *
+ * All Gmail calls authenticate via the shared OAuth token broker
+ * (`getGoogleAccessToken` in ./google-auth — SALE-108). This module holds NO
+ * token-exchange logic of its own; same OAuth client as Drive.
  */
 
 import type { Env } from "../lib/env";
