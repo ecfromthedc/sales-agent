@@ -8,6 +8,65 @@
 
 import type { Env } from "../lib/env";
 
+/** Spotify client-credentials token endpoint. */
+const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
+
+/** Refresh slightly early so an in-flight request never races token expiry. */
+const TOKEN_EXPIRY_SKEW_MS = 60_000;
+
+/**
+ * In-memory cache for the client-credentials access token.
+ *
+ * Worker isolates are reused across requests, so caching here avoids
+ * re-exchanging credentials on every enrichment call within the token's
+ * lifetime. `expiresAt` is an absolute epoch-ms deadline; once `Date.now()`
+ * crosses it the next call refreshes.
+ */
+let cachedToken: { value: string; expiresAt: number } | null = null;
+
+/**
+ * Reset the in-memory token cache. Test-only hook — not used in production code.
+ * @internal
+ */
+export function __resetSpotifyTokenCache(): void {
+  cachedToken = null;
+}
+
+/**
+ * Exchange Spotify client credentials for an access token (client-credentials flow).
+ *
+ * Caches the token in-memory and reuses it until shortly before it expires,
+ * then refreshes. Throws on a non-OK response from the token endpoint so callers
+ * can decide how to handle auth/credential failures.
+ */
+export async function getSpotifyToken(env: Env): Promise<string> {
+  if (cachedToken && Date.now() < cachedToken.expiresAt) {
+    return cachedToken.value;
+  }
+
+  const creds = btoa(`${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`);
+  const res = await fetch(SPOTIFY_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      authorization: `Basic ${creds}`,
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+  });
+  if (!res.ok) {
+    throw new Error(`Spotify token exchange failed: ${res.status}`);
+  }
+
+  const j = (await res.json()) as { access_token: string; expires_in?: number };
+  // Spotify returns expires_in in seconds; default to 1h if absent.
+  const ttlMs = (j.expires_in ?? 3600) * 1000;
+  cachedToken = {
+    value: j.access_token,
+    expiresAt: Date.now() + ttlMs - TOKEN_EXPIRY_SKEW_MS,
+  };
+  return j.access_token;
+}
+
 export interface SpotifyEnrichment {
   artistId: string;
   name: string;
@@ -26,8 +85,13 @@ export async function enrichFromSpotify(
   const artistId = extractArtistId(url);
   if (!artistId) return null;
 
-  const token = await getAccessToken(env);
-  if (!token) return null;
+  let token: string;
+  try {
+    token = await getSpotifyToken(env);
+  } catch {
+    // Enrichment is best-effort and must never block the brief.
+    return null;
+  }
 
   const [artist, topTracks, albums, related] = await Promise.all([
     fetchJson(`https://api.spotify.com/v1/artists/${artistId}`, token),
@@ -58,21 +122,6 @@ export async function enrichFromSpotify(
 function extractArtistId(url: string): string | null {
   const m = url.match(/artist\/([a-zA-Z0-9]{22})/);
   return m?.[1] ?? null;
-}
-
-async function getAccessToken(env: Env): Promise<string | null> {
-  const creds = btoa(`${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`);
-  const res = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    headers: {
-      authorization: `Basic ${creds}`,
-      "content-type": "application/x-www-form-urlencoded",
-    },
-    body: "grant_type=client_credentials",
-  });
-  if (!res.ok) return null;
-  const j = (await res.json()) as { access_token: string };
-  return j.access_token;
 }
 
 async function fetchJson(url: string, token: string): Promise<any> {
