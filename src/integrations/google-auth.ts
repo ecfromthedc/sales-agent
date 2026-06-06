@@ -8,6 +8,7 @@
  */
 
 import type { Env } from "../lib/env";
+import { apiFetch } from "../lib/http";
 
 interface CachedToken {
   accessToken: string;
@@ -29,17 +30,17 @@ export async function getGoogleAccessToken(env: Env): Promise<string> {
     grant_type: "refresh_token",
   });
 
-  const res = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
-
-  if (!res.ok) {
-    throw new Error(`google_token_refresh_failed: ${res.status} ${await res.text()}`);
-  }
-
-  const j = (await res.json()) as { access_token: string; expires_in: number };
+  // apiFetch parses the JSON body and throws an HttpError (carrying the status +
+  // response text) on a non-2xx response — same observable behavior as the manual
+  // fetch + !res.ok throw it replaces. No caller inspects the error message.
+  const j = await apiFetch<{ access_token: string; expires_in: number }>(
+    "https://oauth2.googleapis.com/token",
+    {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    },
+  );
   memCache = {
     accessToken: j.access_token,
     expiresAt: now + j.expires_in * 1000,
