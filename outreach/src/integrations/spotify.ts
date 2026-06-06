@@ -1,35 +1,18 @@
 import type { Env } from '../lib/env';
 import type { SpotifyRelease, ReleaseCadence } from '../lib/types';
-
-let tokenCache: { token: string; expiresAt: number } | null = null;
-
-async function getAccessToken(env: Env): Promise<string> {
-  if (tokenCache && Date.now() < tokenCache.expiresAt) {
-    return tokenCache.token;
-  }
-
-  const response = await fetch('https://accounts.spotify.com/api/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Authorization: `Basic ${btoa(`${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`)}`,
-    },
-    body: 'grant_type=client_credentials',
-  });
-
-  if (!response.ok) throw new Error(`Spotify auth failed: ${response.status}`);
-  const data = (await response.json()) as { access_token: string; expires_in: number };
-
-  tokenCache = {
-    token: data.access_token,
-    expiresAt: Date.now() + (data.expires_in - 60) * 1000,
-  };
-
-  return data.access_token;
-}
+// SALE-130: First real cross-Worker dedup. Henry's local client-credentials
+// token function is replaced by the shared, Env-decoupled `getSpotifyToken`
+// (decoupled to take a minimal `SpotifyEnv` in SALE-129). Direct module import
+// — NOT the `../../../src/shared` barrel, which would transitively pull in
+// notion.ts → Env → puppeteer. Henry's `Env` is a structural superset of
+// `SpotifyEnv` ({SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET}), so existing call
+// sites pass `env` unchanged. The shared implementation preserves the same
+// in-memory token cache + 60s expiry skew, so token-fetch semantics are
+// identical — no behavior change to outreach's Spotify calls.
+import { getSpotifyToken } from '../../../src/integrations/spotify';
 
 async function spotifyFetch(env: Env, path: string): Promise<unknown> {
-  const token = await getAccessToken(env);
+  const token = await getSpotifyToken(env);
   const response = await fetch(`https://api.spotify.com/v1${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
