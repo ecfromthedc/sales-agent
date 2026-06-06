@@ -33,6 +33,7 @@ export interface Env {
   SLACK_BOT_TOKEN: string;
   SLACK_BRIEF_CHANNEL_ID: string;
   SLACK_PROPOSALS_CHANNEL_ID?: string;   // optional; post-call pitch notices (no-ops if unset)
+  SLACK_EMAIL_DIGEST_CHANNEL_ID?: string; // optional; inbox triage digest notices (no-ops if unset)
   PUBLIC_BASE_URL?: string;              // optional; e.g. https://rt-sales-call-agent.<sub>.workers.dev — for proposal live links
 
   // Bindings
