@@ -106,12 +106,19 @@ export async function getUnscoredLeads(env: Env): Promise<Lead[]> {
   return data.results.map(pageToLead);
 }
 
-export async function getLeadById(env: Env, pageId: string): Promise<Lead> {
-  const page = (await notionFetch(env, `/pages/${pageId}`, {
-    method: 'GET',
-  })) as Record<string, unknown>;
+export async function getLeadById(env: Env, pageId: string): Promise<Lead | null> {
+  try {
+    const page = (await notionFetch(env, `/pages/${pageId}`, {
+      method: 'GET',
+    })) as Record<string, unknown>;
 
-  return pageToLead(page);
+    return pageToLead(page);
+  } catch (e) {
+    // notionFetch throws `notion_${status}_...` on non-2xx. A missing/inaccessible
+    // page is a 404 → return null so callers can render a clean 404, not a 500.
+    if (e instanceof Error && e.message.includes('notion_404')) return null;
+    throw e;
+  }
 }
 
 function pageToLead(page: Record<string, unknown>): Lead {
