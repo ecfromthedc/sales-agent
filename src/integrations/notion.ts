@@ -15,7 +15,31 @@ import type { Env } from "../lib/env";
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
-async function notionFetch(env: Env, method: string, path: string, body?: unknown): Promise<any> {
+export interface NotionFetchOptions {
+  /** HTTP method. Defaults to "GET". */
+  method?: string;
+  /** Request body, JSON-stringified when present. */
+  body?: unknown;
+}
+
+/**
+ * Raw Notion API transport primitive — the single place that owns the base URL,
+ * Authorization header, Notion-Version header, and JSON request/response handling.
+ *
+ * Every DB-specific query/CRUD helper in this module routes through here; there
+ * are no stray inline Notion fetches.
+ *
+ * Error contract (relied on by callers — DO NOT change the format):
+ * a non-2xx response throws `Error` with message
+ *   `notion_${status}_${method}_${path}: <body excerpt>`
+ * e.g. `getDealById` treats `notion_404_` as "not found" and returns null.
+ */
+export async function notionFetch(
+  env: Env,
+  path: string,
+  opts: NotionFetchOptions = {},
+): Promise<any> {
+  const method = opts.method ?? "GET";
   const res = await fetch(`${NOTION_API}${path}`, {
     method,
     headers: {
@@ -23,7 +47,7 @@ async function notionFetch(env: Env, method: string, path: string, body?: unknow
       "notion-version": NOTION_VERSION,
       "content-type": "application/json",
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
   });
   const text = await res.text();
   if (!res.ok) {
@@ -106,14 +130,17 @@ function codeBlocks(text: string, language = "html"): any[] {
 // ---------- Deals ----------
 export async function upsertDeal(input: DealUpsertInput, env: Env): Promise<string> {
   // Dedupe by invitee email + eventUri.
-  const existing = await notionFetch(env, "POST", `/databases/${env.NOTION_DEALS_DB_ID}/query`, {
-    filter: {
-      and: [
-        { property: "Invitee Email", email: { equals: input.inviteeEmail } },
-        { property: "Event URI", url: { equals: input.eventUri } },
-      ],
+  const existing = await notionFetch(env, `/databases/${env.NOTION_DEALS_DB_ID}/query`, {
+    method: "POST",
+    body: {
+      filter: {
+        and: [
+          { property: "Invitee Email", email: { equals: input.inviteeEmail } },
+          { property: "Event URI", url: { equals: input.eventUri } },
+        ],
+      },
+      page_size: 1,
     },
-    page_size: 1,
   });
 
   const properties: Record<string, any> = {
@@ -132,11 +159,14 @@ export async function upsertDeal(input: DealUpsertInput, env: Env): Promise<stri
   let pageId: string;
   if (existing.results && existing.results.length > 0) {
     pageId = existing.results[0].id;
-    await notionFetch(env, "PATCH", `/pages/${pageId}`, { properties });
+    await notionFetch(env, `/pages/${pageId}`, { method: "PATCH", body: { properties } });
   } else {
-    const created = await notionFetch(env, "POST", "/pages", {
-      parent: { database_id: env.NOTION_DEALS_DB_ID },
-      properties,
+    const created = await notionFetch(env, "/pages", {
+      method: "POST",
+      body: {
+        parent: { database_id: env.NOTION_DEALS_DB_ID },
+        properties,
+      },
     });
     pageId = created.id;
   }
@@ -146,8 +176,9 @@ export async function upsertDeal(input: DealUpsertInput, env: Env): Promise<stri
 }
 
 async function appendBriefBlocks(pageId: string, brief: string, env: Env): Promise<void> {
-  await notionFetch(env, "PATCH", `/blocks/${pageId}/children`, {
-    children: [heading("Pre-Call Brief", 2), ...splitParagraphs(brief)],
+  await notionFetch(env, `/blocks/${pageId}/children`, {
+    method: "PATCH",
+    body: { children: [heading("Pre-Call Brief", 2), ...splitParagraphs(brief)] },
   });
 }
 
@@ -155,7 +186,7 @@ export async function getDealById(dealId: string, env: Env): Promise<Deal | null
   // Fetch the Deals page — returns null on 404, throws on other errors.
   let page: any;
   try {
-    page = await notionFetch(env, "GET", `/pages/${dealId}`);
+    page = await notionFetch(env, `/pages/${dealId}`);
   } catch (err: unknown) {
     if (err instanceof Error && err.message.includes("notion_404_")) return null;
     throw err;
@@ -172,7 +203,7 @@ export async function getDealById(dealId: string, env: Env): Promise<Deal | null
   // Deal page body: pre-call brief lives in child blocks appended by upsertDeal.
   let brief: string | undefined;
   try {
-    const dealBlocks = await notionFetch(env, "GET", `/blocks/${dealId}/children?page_size=100`);
+    const dealBlocks = await notionFetch(env, `/blocks/${dealId}/children?page_size=100`);
     const paragraphs: string[] = [];
     let inBrief = false;
     for (const block of dealBlocks.results ?? []) {
@@ -203,12 +234,14 @@ export async function getDealById(dealId: string, env: Env): Promise<Deal | null
   try {
     const transcriptQuery = await notionFetch(
       env,
-      "POST",
       `/databases/${env.NOTION_TRANSCRIPTS_DB_ID}/query`,
       {
-        filter: { property: "Deal", relation: { contains: dealId } },
-        sorts: [{ property: "Started At", direction: "descending" }],
-        page_size: 1,
+        method: "POST",
+        body: {
+          filter: { property: "Deal", relation: { contains: dealId } },
+          sorts: [{ property: "Started At", direction: "descending" }],
+          page_size: 1,
+        },
       },
     );
 
@@ -221,7 +254,6 @@ export async function getDealById(dealId: string, env: Env): Promise<Deal | null
       // Transcript body lives in the page's child blocks (written by saveTranscript).
       const blocks = await notionFetch(
         env,
-        "GET",
         `/blocks/${transcriptPage.id}/children?page_size=100`,
       );
 
@@ -266,15 +298,18 @@ export async function resolveDealForMeeting(
   const lower = new Date(startWindow.getTime() - 60 * 60 * 1000).toISOString();
   const upper = new Date(startWindow.getTime() + 60 * 60 * 1000).toISOString();
 
-  const res = await notionFetch(env, "POST", `/databases/${env.NOTION_DEALS_DB_ID}/query`, {
-    filter: {
-      and: [
-        { property: "Invitee Email", email: { equals: externalAttendee.email } },
-        { property: "Event Starts At", date: { on_or_after: lower } },
-        { property: "Event Starts At", date: { on_or_before: upper } },
-      ],
+  const res = await notionFetch(env, `/databases/${env.NOTION_DEALS_DB_ID}/query`, {
+    method: "POST",
+    body: {
+      filter: {
+        and: [
+          { property: "Invitee Email", email: { equals: externalAttendee.email } },
+          { property: "Event Starts At", date: { on_or_after: lower } },
+          { property: "Event Starts At", date: { on_or_before: upper } },
+        ],
+      },
+      page_size: 1,
     },
-    page_size: 1,
   });
 
   return res.results?.[0] ? { id: res.results[0].id } : null;
@@ -307,10 +342,13 @@ export async function saveTranscript(input: {
   }
   children.push(...splitParagraphs(input.transcript));
 
-  await notionFetch(env, "POST", "/pages", {
-    parent: { database_id: env.NOTION_TRANSCRIPTS_DB_ID },
-    properties,
-    children,
+  await notionFetch(env, "/pages", {
+    method: "POST",
+    body: {
+      parent: { database_id: env.NOTION_TRANSCRIPTS_DB_ID },
+      properties,
+      children,
+    },
   });
 }
 
@@ -338,15 +376,19 @@ export async function attachPitchArtifacts(input: {
     ...input.transcriptQuoted.map((q) => bullet(`"${q}"`)),
   ];
 
-  await notionFetch(env, "POST", "/pages", {
-    parent: { database_id: env.NOTION_PITCH_ARTIFACTS_DB_ID },
-    properties,
-    children,
+  await notionFetch(env, "/pages", {
+    method: "POST",
+    body: {
+      parent: { database_id: env.NOTION_PITCH_ARTIFACTS_DB_ID },
+      properties,
+      children,
+    },
   });
 
   // Flip deal status: -> Pitched
-  await notionFetch(env, "PATCH", `/pages/${input.dealId}`, {
-    properties: { Status: { select: { name: "Pitched" } } },
+  await notionFetch(env, `/pages/${input.dealId}`, {
+    method: "PATCH",
+    body: { properties: { Status: { select: { name: "Pitched" } } } },
   });
 }
 
@@ -447,13 +489,17 @@ export async function attachProposalArtifact(input: {
     ...input.transcriptQuoted.map((q: string) => bullet(`"${q}"`)),
   ];
 
-  await notionFetch(env, "POST", "/pages", {
-    parent: { database_id: env.NOTION_PITCH_ARTIFACTS_DB_ID },
-    properties,
-    children,
+  await notionFetch(env, "/pages", {
+    method: "POST",
+    body: {
+      parent: { database_id: env.NOTION_PITCH_ARTIFACTS_DB_ID },
+      properties,
+      children,
+    },
   });
 
-  await notionFetch(env, "PATCH", `/pages/${input.dealId}`, {
-    properties: { Status: { select: { name: "Pitched" } } },
+  await notionFetch(env, `/pages/${input.dealId}`, {
+    method: "PATCH",
+    body: { properties: { Status: { select: { name: "Pitched" } } } },
   });
 }
