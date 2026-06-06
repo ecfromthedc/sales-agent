@@ -8,6 +8,10 @@
  *
  * We use a cron trigger (every 5 min) to list files in the folder modified since
  * the last successful poll. State persists in KV under `transcript-poll:cursor`.
+ *
+ * All Drive calls authenticate via the shared OAuth token broker
+ * (`getGoogleAccessToken` in ./google-auth — SALE-108). This module holds NO
+ * token-exchange logic of its own; same OAuth client as Gmail.
  */
 
 import type { Env } from "../lib/env";

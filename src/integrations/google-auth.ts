@@ -1,10 +1,27 @@
 /**
- * Google OAuth — exchanges the long-lived refresh token for a short-lived
- * access token. The same OAuth client covers Gmail + Drive (scopes:
- * gmail.readonly + drive.readonly).
+ * google-auth — THE shared Google OAuth token broker for the monorepo.
+ * (SALE-108)
  *
- * Access tokens are cached in KV (or memory if KV not bound) until 5 min
- * before expiry to cut the round trips.
+ * This module is the single source of truth for minting a Google access token.
+ * Every Google integration in the repo (Gmail history + draft creation in
+ * `gmail.ts`, Drive transcript polling in `google-drive.ts`) MUST obtain its
+ * bearer token by calling the one exported primitive below —
+ * {@link getGoogleAccessToken}. Do NOT inline a second refresh-token exchange
+ * anywhere; route new Google callers through this export so there is exactly
+ * one place that knows the OAuth client, scopes, endpoint, and cache policy.
+ *
+ * Contract (kept EXACTLY as-is — no behavior change):
+ *   - OAuth client: one client covers both Gmail + Drive
+ *     (scopes: `gmail.readonly` + `drive.readonly`; re-mint to add
+ *     `gmail.compose` for draft writes — see gmail.ts SCOPE REQUIREMENT note).
+ *   - Endpoint: exchanges the long-lived `GMAIL_OAUTH_REFRESH_TOKEN` at
+ *     `https://oauth2.googleapis.com/token` (grant_type=refresh_token) for a
+ *     short-lived access token.
+ *   - Cache: the minted access token is cached in a process-local in-memory
+ *     cache and reused until 5 min before its expiry, cutting redundant token
+ *     round trips within a single Worker isolate.
+ *   - HTTP: uses the shared {@link apiFetch} wrapper (SALE-106), which throws an
+ *     `HttpError` (status + body) on a non-2xx token response.
  */
 
 import type { Env } from "../lib/env";
@@ -17,6 +34,23 @@ interface CachedToken {
 
 let memCache: CachedToken | null = null;
 
+/**
+ * Test-only: clear the in-memory access-token cache so each test starts from a
+ * cold cache. Not used by production code paths. Mirrors the Spotify broker's
+ * `__resetSpotifyTokenCache` so the token-exchange contract is unit-testable.
+ */
+export function __resetGoogleTokenCache(): void {
+  memCache = null;
+}
+
+/**
+ * Mint a Google access token for the monorepo's Gmail + Drive integrations.
+ *
+ * Returns a cached token when one is still valid (>5 min from expiry); otherwise
+ * exchanges the refresh token for a fresh one, caches it, and returns it.
+ *
+ * @throws {import("../lib/http").HttpError} when the token endpoint returns non-2xx.
+ */
 export async function getGoogleAccessToken(env: Env): Promise<string> {
   const now = Date.now();
   if (memCache && memCache.expiresAt - 300_000 > now) {
