@@ -28,7 +28,7 @@ import { readRunState, shapeStatus, recordRun, recordError } from "./lib/run-sta
 import { handleSlackInteraction } from "./roles/sales/triggers/slack-interactions";
 import { handleSlackEvent } from "./roles/sales/triggers/slack-events";
 import { handleFirefliesWebhook } from "./roles/sales/triggers/fireflies-webhook";
-import { serveProposal } from "./triggers/proposal-public";
+import { serveProposal } from "./roles/sales/triggers/proposal-public";
 
 const SERVICE = "rt-sales-call-agent";
 

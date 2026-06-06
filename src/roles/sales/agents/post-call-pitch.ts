@@ -17,7 +17,7 @@
 import type { Env } from "../../../lib/env";
 import { resolveDealForMeeting, attachPitchArtifacts, saveTranscript } from "../../../integrations/notion";
 import { composePitch } from "../../../lib/anthropic";
-import { renderPitchPdf } from "../../../integrations/pdf";
+import { renderPitchPdf } from "../integrations/pdf";
 import { createGmailDraft } from "../../../integrations/gmail";
 import { notifySlack, buildPitchMessage } from "../../../integrations/slack";
 import { recordRun, recordError } from "../../../lib/run-state";

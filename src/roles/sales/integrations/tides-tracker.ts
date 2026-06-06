@@ -13,7 +13,7 @@
  * an unverified endpoint.
  */
 
-import type { Env } from "../lib/env";
+import type { Env } from "../../../lib/env";
 
 export interface PastCampaignsResult {
   count: number;

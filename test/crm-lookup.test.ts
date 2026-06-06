@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapPageToCampaignMatch, type NotionPage } from "../src/integrations/crm-lookup";
+import { mapPageToCampaignMatch, type NotionPage } from "../src/roles/sales/integrations/crm-lookup";
 
 describe("mapPageToCampaignMatch", () => {
   it("maps a fully-populated Notion page", () => {

@@ -29,7 +29,7 @@
 import type { Env } from "../../../lib/env";
 import { saveTranscript, attachPitchArtifacts } from "../../../integrations/notion";
 import { composePitch, type PitchOutput } from "../../../lib/anthropic";
-import { renderPitchPdf } from "../../../integrations/pdf";
+import { renderPitchPdf } from "../integrations/pdf";
 import {
   shapeSmokeReport,
   type SmokeStage,
