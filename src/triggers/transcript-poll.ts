@@ -11,7 +11,7 @@
 
 import type { Env } from "../lib/env";
 import { listMeetTranscriptsSince, downloadTranscriptText } from "../integrations/google-drive";
-import { runPostCallPitch } from "../agents/post-call-pitch";
+import { runPostCallPitch } from "../roles/sales/agents/post-call-pitch";
 
 const CURSOR_KEY = "transcript-poll:cursor";
 const LOOKBACK_MS = 10 * 60 * 1000; // fallback window if no cursor

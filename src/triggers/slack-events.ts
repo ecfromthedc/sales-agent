@@ -11,7 +11,7 @@
  */
 
 import type { Env } from "../lib/env";
-import { refineProposal } from "../agents/proposal-drafter";
+import { refineProposal } from "../roles/sales/agents/proposal-drafter";
 import { verifySlackRequest } from "../lib/slack-verify";
 
 interface SlackEnvelope {

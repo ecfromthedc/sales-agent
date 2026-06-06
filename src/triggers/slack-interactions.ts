@@ -15,7 +15,7 @@
 
 import type { Env } from "../lib/env";
 import { getDealById } from "../integrations/notion";
-import { runProposalDrafter } from "../agents/proposal-drafter";
+import { runProposalDrafter } from "../roles/sales/agents/proposal-drafter";
 import { verifySlackRequest } from "../lib/slack-verify";
 
 interface SlackInteractionPayload {

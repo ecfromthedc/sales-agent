@@ -5,7 +5,7 @@ import type { Env } from "../src/lib/env";
 
 // runProposalDrafter must NEVER run for an unauthenticated request. We spy on
 // the module so we can assert it was not dispatched.
-import * as proposalDrafter from "../src/agents/proposal-drafter";
+import * as proposalDrafter from "../src/roles/sales/agents/proposal-drafter";
 
 const SECRET = "8f742231b10e8888abcd99yyyzzz85a5";
 
