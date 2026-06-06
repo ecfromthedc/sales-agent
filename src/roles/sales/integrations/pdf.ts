@@ -20,8 +20,8 @@
  */
 
 import puppeteer from "@cloudflare/puppeteer";
-import type { Env } from "../lib/env";
-import { pitchPdfKey, pendingPitchPdfKey, finalizePitchHtml } from "../lib/pdf-key";
+import type { Env } from "../../../lib/env";
+import { pitchPdfKey, pendingPitchPdfKey, finalizePitchHtml } from "../../../lib/pdf-key";
 
 interface RenderInput {
   dealId: string;

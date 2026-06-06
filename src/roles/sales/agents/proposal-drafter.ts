@@ -20,7 +20,7 @@ import {
   saveTranscript,
 } from "../../../integrations/notion";
 import { composeProposal, type ProposalOutput } from "../../../lib/anthropic";
-import { renderProposalHtml } from "../../../integrations/proposal-render";
+import { renderProposalHtml } from "../integrations/proposal-render";
 
 export interface ProposalDraftResult {
   proposal: ProposalOutput;

@@ -8,8 +8,8 @@
  * Database: Rising Tides CRM (1961465b-b829-8009-9536-000bdd0226f1)
  */
 
-import type { Env } from "../lib/env";
-import type { ComparableCandidate } from "../lib/comparables";
+import type { Env } from "../../../lib/env";
+import type { ComparableCandidate } from "../../../lib/comparables";
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";

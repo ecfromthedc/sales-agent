@@ -12,7 +12,7 @@
  *   - Brand kit is hardcoded and not up for negotiation by the model.
  */
 
-import type { ProposalOutput } from "../lib/anthropic";
+import type { ProposalOutput } from "../../../lib/anthropic";
 
 type Prd = ProposalOutput["prd"];
 

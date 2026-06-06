@@ -17,7 +17,7 @@ import { enrichFromSpotify } from "../../../integrations/spotify";
 import { enrichFromSongstats } from "../../../integrations/songstats";
 import { enrichFromChartmetric } from "../../../integrations/chartmetric";
 import { searchGmailHistory } from "../../../integrations/gmail";
-import { lookupCRM, campaignToComparable } from "../../../integrations/crm-lookup";
+import { lookupCRM, campaignToComparable } from "../integrations/crm-lookup";
 import { upsertDeal, type DealUpsertInput } from "../../../integrations/notion";
 import { rankComparables, type ProspectSignal } from "../../../lib/comparables";
 import { composeBrief } from "../../../lib/anthropic";

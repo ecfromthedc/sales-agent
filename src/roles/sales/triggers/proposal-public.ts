@@ -8,8 +8,8 @@
  * crafted id can never escape the `proposals/<id>/latest.html` R2 key prefix.
  */
 
-import type { Env } from "../lib/env";
-import { isValidDealId } from "../lib/proposal-security";
+import type { Env } from "../../../lib/env";
+import { isValidDealId } from "../../../lib/proposal-security";
 
 export async function serveProposal(dealId: string, env: Env): Promise<Response> {
   // Guard against path tricks — dealId should be a plain id, no slashes/dots.
