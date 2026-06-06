@@ -13,10 +13,10 @@
  * verify it, and only then parse the URL-encoded `payload=` field.
  */
 
-import type { Env } from "../lib/env";
-import { getDealById } from "../integrations/notion";
-import { runProposalDrafter } from "../roles/sales/agents/proposal-drafter";
-import { verifySlackRequest } from "../lib/slack-verify";
+import type { Env } from "../../../lib/env";
+import { getDealById } from "../../../integrations/notion";
+import { runProposalDrafter } from "../agents/proposal-drafter";
+import { verifySlackRequest } from "../../../lib/slack-verify";
 
 interface SlackInteractionPayload {
   type: "block_actions";

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { handleSlackInteraction } from "../src/triggers/slack-interactions";
+import { handleSlackInteraction } from "../src/roles/sales/triggers/slack-interactions";
 import { computeSlackSignature } from "../src/lib/slack-verify";
 import type { Env } from "../src/lib/env";
 

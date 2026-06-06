@@ -9,9 +9,9 @@
  *   { meeting: {...}, transcript: { text: "..." } }
  */
 
-import type { Env } from "../lib/env";
-import { runPostCallPitch } from "../roles/sales/agents/post-call-pitch";
-import { downloadTranscriptText, listMeetTranscriptsSince } from "../integrations/google-drive";
+import type { Env } from "../../../lib/env";
+import { runPostCallPitch } from "../agents/post-call-pitch";
+import { downloadTranscriptText, listMeetTranscriptsSince } from "../../../integrations/google-drive";
 
 export async function handleTranscriptWebhook(
   req: Request,

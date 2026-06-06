@@ -3,11 +3,11 @@
  * POST /runs/:dealId/:agent  where agent is "pre-call" | "post-call" | "proposal"
  */
 
-import type { Env } from "../lib/env";
-import { getDealById } from "../integrations/notion";
-import { runPreCallBrief } from "../roles/sales/agents/pre-call-brief";
-import { runPostCallPitch } from "../roles/sales/agents/post-call-pitch";
-import { runProposalDrafter } from "../roles/sales/agents/proposal-drafter";
+import type { Env } from "../../../lib/env";
+import { getDealById } from "../../../integrations/notion";
+import { runPreCallBrief } from "../agents/pre-call-brief";
+import { runPostCallPitch } from "../agents/post-call-pitch";
+import { runProposalDrafter } from "../agents/proposal-drafter";
 
 export async function handleManualRerun(
   dealId: string,
