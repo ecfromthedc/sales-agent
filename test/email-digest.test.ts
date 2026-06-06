@@ -141,7 +141,11 @@ describe("postInboxDigest — clean no-op when channel unset", () => {
     const env = { SLACK_BOT_TOKEN: "xoxb-test" } as unknown as Env; // channel unset
 
     const res = await postInboxDigest(env, { fetchImpl });
-    expect(res).toEqual({ posted: false, skipped: true });
+    expect(res).toEqual({
+      posted: false,
+      skipped: true,
+      counts: { action_required: 0, meeting_info: 0, info_only: 0, skip: 0 },
+    });
     expect(calls).toHaveLength(0); // no Slack post, no Gmail read — pure no-op
   });
 
@@ -151,7 +155,11 @@ describe("postInboxDigest — clean no-op when channel unset", () => {
     }) as unknown as typeof fetch;
     const env = {} as unknown as Env;
     const res = await postInboxDigest(env, { fetchImpl });
-    expect(res).toEqual({ posted: false, skipped: true });
+    expect(res).toEqual({
+      posted: false,
+      skipped: true,
+      counts: { action_required: 0, meeting_info: 0, info_only: 0, skip: 0 },
+    });
   });
 });
 
@@ -227,7 +235,15 @@ describe("postInboxDigest — end-to-end (channel set)", () => {
     vi.stubGlobal("fetch", fetchImpl); // token broker uses global fetch
 
     const res = await postInboxDigest(E2E_ENV, { fetchImpl });
-    expect(res).toEqual({ posted: true });
+    expect(res.posted).toBe(true);
+    expect(res.skipped).toBeUndefined();
+    // Exactly one message was triaged across the four tiers.
+    const total =
+      res.counts.action_required +
+      res.counts.meeting_info +
+      res.counts.info_only +
+      res.counts.skip;
+    expect(total).toBe(1);
 
     // Exactly one Slack post, to the configured channel, carrying the digest.
     const slackCalls = calls.filter((c) => c.url.includes("slack.com/api/chat.postMessage"));

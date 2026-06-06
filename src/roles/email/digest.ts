@@ -45,11 +45,39 @@ export interface PostInboxDigestOptions {
   fetchImpl?: typeof fetch;
 }
 
+/** Per-tier message counts surfaced to callers (e.g. the /test/email-digest route). */
+export interface DigestCounts {
+  action_required: number;
+  meeting_info: number;
+  info_only: number;
+  skip: number;
+}
+
+/** All-zero counts — used when the run is skipped before any triage happens. */
+const ZERO_COUNTS: DigestCounts = {
+  action_required: 0,
+  meeting_info: 0,
+  info_only: 0,
+  skip: 0,
+};
+
+/** Reduce a triage digest to its per-tier counts. PURE. */
+function digestCounts(digest: InboxDigest): DigestCounts {
+  return {
+    action_required: digest.action_required.length,
+    meeting_info: digest.meeting_info.length,
+    info_only: digest.info_only.length,
+    skip: digest.skip.length,
+  };
+}
+
 export interface PostInboxDigestResult {
   /** true when a Slack message was actually posted. */
   posted: boolean;
   /** true when the post was deliberately skipped (no channel / no token). */
   skipped?: boolean;
+  /** Per-tier counts from the triage run (all-zero when skipped before triage). */
+  counts: DigestCounts;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +159,7 @@ export async function postInboxDigest(
 
   // Fast no-op: if there's nowhere to post, skip the (read-only) Gmail work too.
   if (!channel) {
-    return { posted: false, skipped: true };
+    return { posted: false, skipped: true, counts: ZERO_COUNTS };
   }
 
   const digest = await triageInbox(env, {
@@ -139,6 +167,7 @@ export async function postInboxDigest(
     fetchImpl: opts.fetchImpl,
   });
 
+  const counts = digestCounts(digest);
   const message = buildDigestMessage(digest);
 
   const result = await notifySlack(
@@ -148,6 +177,6 @@ export async function postInboxDigest(
     opts.fetchImpl as unknown as Parameters<typeof notifySlack>[3],
   );
 
-  if (result.skipped) return { posted: false, skipped: true };
-  return { posted: result.ok };
+  if (result.skipped) return { posted: false, skipped: true, counts };
+  return { posted: result.ok, counts };
 }

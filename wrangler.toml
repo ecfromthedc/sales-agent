@@ -4,9 +4,13 @@ compatibility_date = "2026-05-14"
 compatibility_flags = ["nodejs_compat"]
 account_id = "d5fbf64067844a591842c14f1b53bd79"
 
-# Cron — poll Drive for new Meet transcripts every 5 minutes
+# Cron triggers:
+#   */5 * * * *  — poll Drive for new Meet transcripts (every 5 minutes)
+#   7 13 * * *   — daily inbox-triage email digest (~13:07 UTC, morning-ish ET).
+#                  INERT until SLACK_EMAIL_DIGEST_CHANNEL_ID is set; read/notify
+#                  only (no email send/draft). See src/roles/email/digest.ts.
 [triggers]
-crons = ["*/5 * * * *"]
+crons = ["*/5 * * * *", "7 13 * * *"]
 
 # Runtime config (not secrets)
 [vars]
