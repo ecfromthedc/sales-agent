@@ -200,6 +200,105 @@ describe("classifyEmail — precedence: human ask beats bulk noise is blocked", 
   });
 });
 
+describe("classifyEmail — negation-aware action keywords (SALE-117)", () => {
+  it("'No action needed' from a human-looking sender is NOT action_required", () => {
+    const r = classifyEmail({
+      from: "Jordan <jordan@label.com>",
+      subject: "Review scheduled",
+      snippet: "Your review is scheduled. No action needed on your part.",
+    });
+    expect(r.tier).not.toBe("action_required");
+    expect(r.tier).toBe("info_only");
+  });
+
+  it("'no action required' is NOT action_required", () => {
+    const r = classifyEmail({
+      from: "Sam <sam@studio.com>",
+      subject: "All set",
+      snippet: "Everything is processed, no action required from you.",
+    });
+    expect(r.tier).not.toBe("action_required");
+    expect(r.tier).toBe("info_only");
+  });
+
+  it("genuine 'action needed:' still fires action_required", () => {
+    const r = classifyEmail({
+      from: "Maya <maya@label.com>",
+      subject: "Contract",
+      snippet: "Action needed: please verify the signatory before Friday.",
+    });
+    expect(r.tier).toBe("action_required");
+    expect(r.reasons.some((x) => x.includes("action keyword"))).toBe(true);
+  });
+
+  it("a genuine 'please review' ask still fires action_required", () => {
+    const r = classifyEmail({
+      from: "Pat <pat@studio.com>",
+      subject: "Deck",
+      snippet: "Please review the deck before our chat.",
+    });
+    expect(r.tier).toBe("action_required");
+  });
+
+  it("a later un-negated keyword still counts despite an earlier negated one", () => {
+    const r = classifyEmail({
+      from: "Lee <lee@label.com>",
+      subject: "Status",
+      snippet: "No action needed on phase one. Action needed: confirm phase two.",
+    });
+    expect(r.tier).toBe("action_required");
+  });
+});
+
+describe("classifyEmail — tighter meeting keywords (SALE-117)", () => {
+  it("marketing 'we invite you to our launch' is NOT meeting_info", () => {
+    const r = classifyEmail({
+      from: "Brand Team <hello@brand.com>",
+      subject: "Our product launch",
+      snippet: "We invite you to our product launch event next week.",
+    });
+    expect(r.tier).not.toBe("meeting_info");
+    expect(r.tier).toBe("info_only");
+  });
+
+  it("'We invite you to try our beta' is NOT meeting_info", () => {
+    const r = classifyEmail({
+      from: "Product <team@saas.com>",
+      subject: "Early access",
+      snippet: "We invite you to try our beta program today.",
+    });
+    expect(r.tier).not.toBe("meeting_info");
+  });
+
+  it("a real 'Calendar invite: Sync at 3pm' is still meeting_info", () => {
+    const r = classifyEmail({
+      from: "Robin <robin@label.com>",
+      subject: "Calendar invite: Sync at 3pm",
+      snippet: "Adding you to the sync.",
+    });
+    expect(r.tier).toBe("meeting_info");
+    expect(r.reasons.some((x) => x.includes("meeting keyword"))).toBe(true);
+  });
+
+  it("an 'invitation:' calendar event is still meeting_info", () => {
+    const r = classifyEmail({
+      from: "Casey <casey@label.com>",
+      subject: "Invitation: Campaign kickoff @ Mon 2pm",
+      snippet: "Adding the kickoff to your calendar.",
+    });
+    expect(r.tier).toBe("meeting_info");
+  });
+
+  it("'meeting invite' phrase still routes to meeting_info", () => {
+    const r = classifyEmail({
+      from: "Drew <drew@label.com>",
+      subject: "Meeting invite for Thursday",
+      snippet: "Sending over the meeting invite for our Thursday review.",
+    });
+    expect(r.tier).toBe("meeting_info");
+  });
+});
+
 describe("classifyEmail — edge cases & determinism", () => {
   it("empty input does not throw and returns a valid tier", () => {
     const r = classifyEmail({ from: "", subject: "", snippet: "" });

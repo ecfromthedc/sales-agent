@@ -66,6 +66,38 @@ function hasAny(haystack: string, needles: string[]): string[] {
   return hits;
 }
 
+// Negators that, when they immediately precede a keyword, invert its meaning
+// (e.g. "no action needed", "without action required", "doesn't follow up").
+const NEGATORS = ["no ", "not ", "n't ", "without "];
+
+/**
+ * Like `hasAny`, but a hit is rejected when the matched keyword is immediately
+ * preceded by a negator. Scans EVERY occurrence of each needle so a later,
+ * un-negated mention still counts (e.g. "no action needed now, but action
+ * needed: verify" still fires on the second).
+ */
+function hasAnyUnnegated(haystack: string, needles: string[]): string[] {
+  const hits: string[] = [];
+  for (const n of needles) {
+    let from = 0;
+    let matchedClean = false;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const idx = haystack.indexOf(n, from);
+      if (idx === -1) break;
+      const preceding = haystack.slice(Math.max(0, idx - 8), idx);
+      const negated = NEGATORS.some((neg) => preceding.endsWith(neg));
+      if (!negated) {
+        matchedClean = true;
+        break;
+      }
+      from = idx + n.length;
+    }
+    if (matchedClean) hits.push(n);
+  }
+  return hits;
+}
+
 // ---------------------------------------------------------------------------
 // Rule vocabularies
 // ---------------------------------------------------------------------------
@@ -115,9 +147,10 @@ const MEETING_KEYWORDS = [
   "meeting",
   "calendar invite",
   "calendar",
-  "invite",
   "invitation:",
   "calendly",
+  "invited to a meeting",
+  "meeting invite",
   "zoom.us/j/",
   "google meet",
   "meet.google.com",
@@ -232,7 +265,7 @@ export function classifyEmail(input: EmailInput): EmailClassification {
     reasons.push(`meeting keyword (${meetingHits.join(", ")})`);
   }
 
-  const actionHits = hasAny(haystack, ACTION_KEYWORDS);
+  const actionHits = hasAnyUnnegated(haystack, ACTION_KEYWORDS);
   if (actionHits.length > 0) {
     reasons.push(`action keyword (${actionHits.join(", ")})`);
   }
