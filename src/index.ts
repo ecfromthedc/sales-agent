@@ -29,6 +29,8 @@ import { handleSlackInteraction } from "./roles/sales/triggers/slack-interaction
 import { handleSlackEvent } from "./roles/sales/triggers/slack-events";
 import { handleFirefliesWebhook } from "./roles/sales/triggers/fireflies-webhook";
 import { serveProposal } from "./roles/sales/triggers/proposal-public";
+import { handleTestEmailDigest } from "./roles/email/triggers/test-digest";
+import { postInboxDigest } from "./roles/email/digest";
 
 const SERVICE = "rt-sales-call-agent";
 
@@ -68,6 +70,10 @@ export default {
 
       if (route === "POST /test/smoke") {
         return await handleSmokeTest(req, env, ctx);
+      }
+
+      if (route === "POST /test/email-digest") {
+        return await handleTestEmailDigest(req, env, ctx);
       }
 
       if (route === "POST /slack/interactions") {
@@ -123,6 +129,20 @@ export default {
             async (err) => {
               console.error("transcript_poll_failed", { message: (err as Error).message });
               await recordError(env, "transcript-poll");
+            },
+          ),
+          // Inbox-triage digest (SALE-122). READ/NOTIFY ONLY: postInboxDigest
+          // runs triageInbox (read-only Gmail) + a single Slack post — no email
+          // send/draft/modify. Self-no-ops (and skips the Gmail read) unless
+          // SLACK_EMAIL_DIGEST_CHANNEL_ID is set, so this is INERT by default.
+          postInboxDigest(env).then(
+            async (r) => {
+              console.log("email_digest_complete", r);
+              await recordRun(env, "email-digest");
+            },
+            async (err) => {
+              console.error("email_digest_failed", { message: (err as Error).message });
+              await recordError(env, "email-digest");
             },
           ),
         ]);
