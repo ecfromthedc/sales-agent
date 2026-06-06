@@ -24,8 +24,11 @@ export { callClaude } from "../lib/anthropic";
 // Google — OAuth access-token broker (SALE-108)
 export { getGoogleAccessToken } from "../integrations/google-auth";
 
-// Notion — authenticated Notion API fetch helper
-export { notionFetch } from "../integrations/notion";
+// Notion — authenticated Notion API fetch helper.
+// SALE-133: import from the Env-free transport module so this barrel does NOT
+// transitively pull in notion.ts's concrete-Env coupling (and, via Env,
+// @cloudflare/puppeteer), keeping the shared surface cross-Worker importable.
+export { notionFetch } from "../integrations/notion-transport";
 
 // Spotify — client-credentials token broker
 export { getSpotifyToken } from "../integrations/spotify";
