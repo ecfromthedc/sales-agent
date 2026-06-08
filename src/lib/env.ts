@@ -32,6 +32,7 @@ export interface Env {
   MEET_RECORDINGS_FOLDER_ID: string;
   SLACK_BOT_TOKEN: string;
   SLACK_BRIEF_CHANNEL_ID: string;
+  SLACK_BRIEF_CHANNEL_ID_SEENO?: string; // optional; splits Seeno's briefs to their own channel (defaults to SLACK_BRIEF_CHANNEL_ID)
   SLACK_PROPOSALS_CHANNEL_ID?: string;   // optional; post-call pitch notices (no-ops if unset)
   SLACK_EMAIL_DIGEST_CHANNEL_ID?: string; // optional; inbox triage digest notices (no-ops if unset)
   PUBLIC_BASE_URL?: string;              // optional; e.g. https://rt-sales-call-agent.<sub>.workers.dev — for proposal live links

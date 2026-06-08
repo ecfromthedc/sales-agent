@@ -74,6 +74,85 @@ export async function callClaude(
   return res.json() as Promise<MessagesResponse>;
 }
 
+/** Result of a web-search-grounded research call. */
+export interface WebResearchResult {
+  /** Concatenated final answer text. */
+  text: string;
+  /** De-duplicated source citations surfaced during the search. */
+  citations: Array<{ title: string; url: string }>;
+}
+
+// Anthropic server-side web search tool (stable version — no code-execution
+// dependency, so it runs fine in a Worker). The server runs the search loop and
+// may return `pause_turn`; we re-request with the assistant turn appended until
+// it finishes (bounded so a misbehaving loop can't run forever).
+const WEB_SEARCH_TOOL_TYPE = "web_search_20250305";
+const WEB_SEARCH_MAX_TURNS = 5;
+
+/**
+ * Run a web-search-grounded research prompt and return the final text plus
+ * citations. Uses the brief model (fast/cheap). Best-effort: throws on a non-2xx
+ * HTTP response so the caller can swallow it — enrichment must never block a brief.
+ */
+export async function researchWithWebSearch(
+  env: Env,
+  params: { prompt: string; system: string; maxUses?: number },
+): Promise<WebResearchResult> {
+  type Block = { type: string; text?: string; citations?: Array<Record<string, unknown>> };
+  const messages: Array<{ role: "user" | "assistant"; content: string | Block[] }> = [
+    { role: "user", content: params.prompt },
+  ];
+  const tools = [
+    { type: WEB_SEARCH_TOOL_TYPE, name: "web_search", max_uses: params.maxUses ?? 5 },
+  ];
+
+  let final: { content: Block[]; stop_reason: string } | null = null;
+  for (let turn = 0; turn < WEB_SEARCH_MAX_TURNS; turn++) {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "x-api-key": env.ANTHROPIC_API_KEY,
+        "anthropic-version": API_VERSION,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL_BRIEF,
+        max_tokens: 1500,
+        system: params.system,
+        tools,
+        messages,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`anthropic_web_search_${res.status}: ${(await res.text()).slice(0, 500)}`);
+    }
+    final = (await res.json()) as { content: Block[]; stop_reason: string };
+    // `pause_turn` means the server paused mid-search — resume by echoing the
+    // assistant turn back and re-requesting. Any other stop reason is terminal.
+    if (final.stop_reason !== "pause_turn") break;
+    messages.push({ role: "assistant", content: final.content });
+  }
+
+  const blocks = final?.content ?? [];
+  const text = blocks
+    .filter((b) => b.type === "text" && b.text)
+    .map((b) => b.text as string)
+    .join("")
+    .trim();
+
+  const citations = new Map<string, { title: string; url: string }>();
+  for (const b of blocks) {
+    for (const c of b.citations ?? []) {
+      const url = typeof c.url === "string" ? c.url : null;
+      if (url && !citations.has(url)) {
+        citations.set(url, { url, title: typeof c.title === "string" ? c.title : url });
+      }
+    }
+  }
+
+  return { text, citations: [...citations.values()] };
+}
+
 function extractText(res: MessagesResponse): string {
   const textBlock = res.content.find((b) => b.type === "text" && b.text);
   return textBlock?.text ?? "";
@@ -118,12 +197,15 @@ const PRE_CALL_BRIEF_SYSTEM = `You write pre-call briefs for Eric Cromartie, fou
 **ARTIST** — Name, label, genre, monthly listeners, popularity score. One line on where they sit in the market. Done.
 - For popularity, prefer enrichment.chartmetric.cmScore (0–100 cross-platform Chartmetric score) and cmRank (global rank) when present — "Chartmetric 82, ranked #1,400 globally" is the sharpest read on momentum. Fall back to enrichment.songstats Spotify popularity if Chartmetric is missing.
 
+**WHO THEY ARE** — Always include this, from enrichment.web (always-on web research on the booker, their act, and the company behind their email). 2-4 tight lines: who booked the call (artist, manager, or label/company rep), who/what they're connected to, and anything that shapes the pitch. This is the picture for cold prospects where Spotify/Chartmetric are empty — lean on it. If enrichment.web is null or says nothing was found, write "Couldn't confirm much online" and move on. Never invent — only use what enrichment.web states.
+
 **NUMBERS** — Stat block, not prose:
 - Chartmetric score (0–100) + global rank, if present
 - Listeners / Popularity / Followers / Streams
 - Playlists (current + editorial)
 - Social: IG, TikTok, YouTube
-- Top 3 tracks: name | popularity | streams. Popularity 70+ = hot, push as TikTok sound. High streams + low popularity = catalog re-activation play.
+- Top songs: from enrichment.chartmetric.topTracks (up to 5) — name | Spotify popularity. List highest-popularity first. Popularity 70+ = hot, push as a TikTok sound. High streams + low popularity = catalog re-activation play.
+- Latest releases: from enrichment.chartmetric.latestTracks (up to 3) — name | release date | Spotify popularity. This is the momentum read: are their newest drops landing (high popularity) or under-performing (a gap we can fix)? Call out the contrast vs. their top songs if it's stark.
 
 **LINKS** — clickable profile URLs for quick assessment. Pull from enrichment.songstats.platformLinks and the Spotify link from the Calendly Q&A. Format as a compact list:
 - Spotify: [url]

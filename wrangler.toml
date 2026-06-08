@@ -19,6 +19,7 @@ NOTION_TRANSCRIPTS_DB_ID = "3611465b-b829-81a0-b6a0-cc55e6ed784c"
 NOTION_PITCH_ARTIFACTS_DB_ID = "3611465b-b829-8174-875c-c9a6db1540cd"
 MEET_RECORDINGS_FOLDER_ID = "19krQR2fbafw3h0uxLF7SvEoh2mgW0Sy8"        # primary Meet Recordings folder
 SLACK_BRIEF_CHANNEL_ID = "C0B47J6FZ47"
+# SLACK_BRIEF_CHANNEL_ID_SEENO = "C..."      # optional; split Seeno's briefs to their own channel. Unset ⇒ Seeno shares SLACK_BRIEF_CHANNEL_ID above.
 SLACK_PROPOSALS_CHANNEL_ID = "C0B670L4VRS"   # proposal pipeline notices; notifySlack no-ops if unset
 # SLACK_EMAIL_DIGEST_CHANNEL_ID = "C..."     # inbox triage digest notices; postInboxDigest no-ops if unset
 # Public base URL of this Worker — used to build proposal live links (/p/:dealId).

@@ -1,5 +1,6 @@
 node_modules/
 .wrangler/
+logs/
 .dev.vars
 .env
 .env.local
