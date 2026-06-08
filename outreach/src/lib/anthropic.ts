@@ -1,3 +1,11 @@
+// Cross-Worker dedup (SALE-131): the raw Anthropic Messages `fetch` now lives in
+// exactly one place — the shared `callClaude` primitive (Env-decoupled in
+// SALE-129, takes a minimal `AnthropicEnv { ANTHROPIC_API_KEY }`). Henry's `Env`
+// is a structural superset, so callers pass `env` unchanged. This local
+// `callAnthropic` is a thin adapter that preserves Henry's exact prior behavior:
+// single Sonnet call, max_tokens 4096, one system + one user message, returns
+// the extracted text block (or '').
+import { callClaude } from '../../../src/lib/anthropic';
 import type { Env } from './env';
 import type { Artist, Label, LeadScore, OutreachDraft, OutreachSignal } from './types';
 
@@ -9,30 +17,13 @@ async function callAnthropic(
   system: string,
   userMessage: string,
 ): Promise<string> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4096,
-      system,
-      messages: [{ role: 'user', content: userMessage }],
-    }),
+  const res = await callClaude(env, {
+    model,
+    maxTokens: 4096,
+    system,
+    messages: [{ role: 'user', content: userMessage }],
   });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Anthropic API error (${response.status}): ${error}`);
-  }
-
-  const data = (await response.json()) as {
-    content: Array<{ type: string; text?: string }>;
-  };
-  const textBlock = data.content.find((b) => b.type === 'text');
+  const textBlock = res.content.find((b) => b.type === 'text');
   return textBlock?.text ?? '';
 }
 

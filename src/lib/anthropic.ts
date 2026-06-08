@@ -7,12 +7,21 @@
  *   - Opus 4.5 with extended thinking for the post-call pitch (deep reasoning)
  */
 
-import type { Env } from "./env";
 import {
   type FilledPitchSection,
   orderSections,
   sectionsPromptBlock,
 } from "./pitch-sections";
+
+/**
+ * Minimal structural env for {@link callClaude}. Narrowed from the concrete
+ * sales `Env` (SALE-129) so shared primitives don't transitively drag in the
+ * full Worker env (and its `@cloudflare/puppeteer` types). The sales `Env` is a
+ * structural superset, so every existing caller still satisfies this.
+ */
+export interface AnthropicEnv {
+  ANTHROPIC_API_KEY: string;
+}
 
 const API_URL = "https://api.anthropic.com/v1/messages";
 const API_VERSION = "2023-06-01";
@@ -20,7 +29,7 @@ const API_VERSION = "2023-06-01";
 const MODEL_BRIEF = "claude-sonnet-4-5-20250929";  // alias to current Sonnet 4.6
 const MODEL_PITCH = "claude-opus-4-5-20250929";    // alias to current Opus 4.5
 
-interface MessagesResponse {
+export interface MessagesResponse {
   id: string;
   content: Array<{ type: string; text?: string }>;
   stop_reason: string;
@@ -46,7 +55,7 @@ export interface CallClaudeOptions {
  * parsed Messages response.
  */
 export async function callClaude(
-  env: Env,
+  env: AnthropicEnv,
   { model, maxTokens, messages, system, thinking }: CallClaudeOptions,
 ): Promise<MessagesResponse> {
   const body: {
@@ -95,7 +104,7 @@ const WEB_SEARCH_MAX_TURNS = 5;
  * HTTP response so the caller can swallow it — enrichment must never block a brief.
  */
 export async function researchWithWebSearch(
-  env: Env,
+  env: AnthropicEnv,
   params: { prompt: string; system: string; maxUses?: number },
 ): Promise<WebResearchResult> {
   type Block = { type: string; text?: string; citations?: Array<Record<string, unknown>> };
@@ -153,7 +162,13 @@ export async function researchWithWebSearch(
   return { text, citations: [...citations.values()] };
 }
 
-function extractText(res: MessagesResponse): string {
+/**
+ * Pull the first text block out of a Claude Messages response. Returns the empty
+ * string when the response carries no text block (e.g. thinking-only or empty
+ * content). Single source of truth for Claude text extraction across all roles —
+ * callers that want trimmed output should `.trim()` at the call site.
+ */
+export function extractText(res: MessagesResponse): string {
   const textBlock = res.content.find((b) => b.type === "text" && b.text);
   return textBlock?.text ?? "";
 }
@@ -167,7 +182,7 @@ export async function composeBrief(input: {
     questionsAndAnswers: Array<{ question: string; answer: string }>;
   };
   enrichment: unknown;
-}, env: Env): Promise<string> {
+}, env: AnthropicEnv): Promise<string> {
   const res = await callClaude(env, {
     model: MODEL_BRIEF,
     maxTokens: 2048,
@@ -292,7 +307,7 @@ export async function composePitch(input: {
   deal: { id: string };
   transcript: string;
   summary?: string;
-}, env: Env): Promise<PitchOutput> {
+}, env: AnthropicEnv): Promise<PitchOutput> {
   const res = await callClaude(env, {
     model: MODEL_PITCH,
     maxTokens: 8192,
@@ -335,7 +350,7 @@ export async function composeProposal(input: {
   // Refine mode: revise an existing proposal per Eric's Slack instruction.
   priorProposal?: ProposalOutput;
   refinement?: string;
-}, env: Env): Promise<ProposalOutput> {
+}, env: AnthropicEnv): Promise<ProposalOutput> {
   const refineBlock = input.refinement
     ? `\n\n--- REFINEMENT REQUEST ---\nEric reviewed the proposal below and wants this change:\n"${input.refinement}"\n\nReturn the FULL updated JSON object. Apply the requested change. Keep everything else intact unless the change requires otherwise. Still honor every evidence rule — never fabricate to satisfy the edit; if the edit asks for data you don't have, put it in missingData.\n\nCurrent proposal JSON:\n${JSON.stringify(input.priorProposal ?? {}, null, 2)}`
     : "";

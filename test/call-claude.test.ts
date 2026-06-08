@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { callClaude } from "../src/lib/anthropic";
+import { callClaude, extractText } from "../src/lib/anthropic";
+import type { MessagesResponse } from "../src/lib/anthropic";
 import type { Env } from "../src/lib/env";
 
 // SALE-104: callClaude is the single shared Anthropic Messages-API primitive.
@@ -140,5 +141,49 @@ describe("callClaude", () => {
         messages: [{ role: "user", content: "hi" }],
       }),
     ).rejects.toThrow(/anthropic_429: rate limited/);
+  });
+});
+
+// SALE-124: extractText is the single shared Claude text-extraction helper —
+// deduped out of roles/email/reply.ts into lib/anthropic so every role uses one
+// source. These lock its two behaviors: pick the first text block, and fall back
+// to "" when no usable text block is present.
+describe("extractText", () => {
+  function resp(content: MessagesResponse["content"]): MessagesResponse {
+    return {
+      id: "msg_test",
+      content,
+      stop_reason: "end_turn",
+      usage: { input_tokens: 0, output_tokens: 0 },
+    };
+  }
+
+  it("returns the first text block's text", () => {
+    expect(extractText(resp([{ type: "text", text: "hello world" }]))).toBe(
+      "hello world",
+    );
+  });
+
+  it("skips non-text and empty-text blocks to find the first real text", () => {
+    expect(
+      extractText(
+        resp([
+          { type: "thinking" },
+          { type: "text", text: "" },
+          { type: "text", text: "the answer" },
+        ]),
+      ),
+    ).toBe("the answer");
+  });
+
+  it("falls back to the empty string when there is no text block", () => {
+    expect(extractText(resp([{ type: "thinking" }]))).toBe("");
+    expect(extractText(resp([]))).toBe("");
+  });
+
+  it("does NOT trim — preserves surrounding whitespace for callers", () => {
+    expect(extractText(resp([{ type: "text", text: "  padded  " }]))).toBe(
+      "  padded  ",
+    );
   });
 });
