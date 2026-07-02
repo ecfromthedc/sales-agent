@@ -2,8 +2,11 @@
  * Run-state recorder + status payload shaper.
  *
  * The cron pollers and agents write small "I ran" markers into the KV `STATE`
- * namespace so the `/status` endpoint can report liveness and error counts
- * without touching any secret. All status keys live under the `status:` prefix
+ * namespace so the `/status` endpoint can report liveness and *current* health
+ * without touching any secret. The `:errors` counter is a consecutive-failure
+ * streak, not a lifetime total: a success clears it, so any non-zero value on
+ * `/status` means that kind is failing *right now* (not that it hiccuped once
+ * last month). All status keys live under the `status:` prefix
  * to keep them clearly separate from poll cursors (`*-poll:cursor`) and the
  * songstats cache.
  *
@@ -14,7 +17,7 @@
 
 import type { Env } from "./env";
 
-/** A tracked run unit. Each gets a `:last` (ISO timestamp) and `:errors` (count) key. */
+/** A tracked run unit. Each gets a `:last` (ISO timestamp) and `:errors` (consecutive-failure streak) key. */
 export type RunKind =
   | "cron" // the scheduled() tick as a whole
   | "calendly-poll"
@@ -36,17 +39,25 @@ const ALL_KINDS: RunKind[] = [
 const lastKey = (kind: RunKind) => `${PREFIX}${kind}:last`;
 const errKey = (kind: RunKind) => `${PREFIX}${kind}:errors`;
 
-/** Record a successful run: stamp `:last` with the current (or given) time. */
+/**
+ * Record a successful run: stamp `:last` with the current (or given) time and
+ * clear the consecutive-failure streak. Clearing on success is what makes a
+ * non-zero `:errors` on `/status` mean "failing right now" — e.g. a poller that
+ * accumulated a large lifetime count self-heals to 0 on its next good tick.
+ */
 export async function recordRun(
   env: Env,
   kind: RunKind,
   at: string = new Date().toISOString(),
 ): Promise<void> {
   // Best-effort: status bookkeeping must never break the actual run.
-  await env.STATE.put(lastKey(kind), at).catch(() => {});
+  await Promise.all([
+    env.STATE.put(lastKey(kind), at).catch(() => {}),
+    env.STATE.delete(errKey(kind)).catch(() => {}),
+  ]);
 }
 
-/** Increment the persistent error counter for a run kind. Best-effort. */
+/** Increment the consecutive-failure streak for a run kind. Best-effort. */
 export async function recordError(env: Env, kind: RunKind): Promise<void> {
   try {
     const current = parseCount(await env.STATE.get(errKey(kind)));
@@ -100,7 +111,7 @@ export interface StatusPayload {
     brief: RunSummary;
     pitch: RunSummary;
   };
-  /** Sum of all tracked error counters. */
+  /** Sum of every kind's current consecutive-failure streak. 0 ⇒ all healthy. */
   totalErrors: number;
 }
 

@@ -1,7 +1,24 @@
 import { describe, it, expect } from "vitest";
-import { shapeStatus, type RawRunState } from "../src/lib/run-state";
+import {
+  shapeStatus,
+  recordRun,
+  recordError,
+  type RawRunState,
+} from "../src/lib/run-state";
+import type { Env } from "../src/lib/env";
 
 const empty: RawRunState = { last: {}, errors: {} };
+
+/** Minimal in-memory KV stub — only the methods run-state touches. */
+function fakeEnv(): { env: Env; store: Map<string, string> } {
+  const store = new Map<string, string>();
+  const STATE = {
+    get: async (k: string) => store.get(k) ?? null,
+    put: async (k: string, v: string) => void store.set(k, v),
+    delete: async (k: string) => void store.delete(k),
+  };
+  return { env: { STATE } as unknown as Env, store };
+}
 
 describe("shapeStatus", () => {
   it("produces a clean empty snapshot when KV has nothing", () => {
@@ -68,6 +85,26 @@ describe("shapeStatus", () => {
     const out = shapeStatus(raw, { service: "svc" });
     expect(out.cron.lastRun).toBeNull();
     expect(out.agents.brief.lastRun).toBeNull();
+  });
+
+  it("treats :errors as a consecutive-failure streak that a success clears", async () => {
+    const { env, store } = fakeEnv();
+    await recordError(env, "transcript-poll");
+    await recordError(env, "transcript-poll");
+    await recordError(env, "transcript-poll");
+    expect(store.get("status:transcript-poll:errors")).toBe("3");
+
+    // A successful run must reset the streak to 0 (key removed ⇒ parsed as 0)
+    // so a stale lifetime count can't masquerade as a live outage on /status.
+    await recordRun(env, "transcript-poll", "2026-07-02T19:05:00Z");
+    expect(store.has("status:transcript-poll:errors")).toBe(false);
+    expect(store.get("status:transcript-poll:last")).toBe("2026-07-02T19:05:00Z");
+
+    const out = shapeStatus(
+      { last: { "transcript-poll": store.get("status:transcript-poll:last") }, errors: {} },
+      { service: "svc" },
+    );
+    expect(out.cron.transcriptPoll.errors).toBe(0);
   });
 
   it("only ever surfaces whitelisted keys — no leakage of unexpected raw fields", () => {
