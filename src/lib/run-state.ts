@@ -62,8 +62,9 @@ export async function recordError(env: Env, kind: RunKind): Promise<void> {
   try {
     const current = parseCount(await env.STATE.get(errKey(kind)));
     await env.STATE.put(errKey(kind), String(current + 1));
-  } catch {
+  } catch (err) {
     // swallow — never let observability bookkeeping throw into a run path
+    console.warn("record_error_failed", { kind, message: (err as Error).message });
   }
 }
 

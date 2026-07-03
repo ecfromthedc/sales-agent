@@ -17,21 +17,3 @@ export function slugify(s: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-/** Format a number as whole-dollar USD (no cents). */
-export function formatUSD(n: number): string {
-  const v = Math.round(Number.isFinite(n) ? n : 0);
-  return "$" + v.toLocaleString("en-US");
-}
-
-/** Clamp a number into [min, max]. */
-export function clamp(n: number, min: number, max: number): number {
-  return Math.min(Math.max(n, min), max);
-}
-
-/** Compact follower/listener counts: 12_500 -> "12.5K", 2_400_000 -> "2.4M". */
-export function compact(n: number): string {
-  const a = Math.abs(n);
-  if (a >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
-  if (a >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
-  return String(Math.round(n));
-}

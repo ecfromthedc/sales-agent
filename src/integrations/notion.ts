@@ -11,7 +11,7 @@
  */
 
 import type { Env } from "../lib/env";
-import { notionFetch, type NotionEnv } from "./notion-transport";
+import { notionFetch } from "./notion-transport";
 
 // SALE-133: the Env-free Notion transport (base URL, version, the NotionEnv
 // surface, and notionFetch) now lives in ./notion-transport so it can be

@@ -21,6 +21,7 @@ import {
 } from "../../../integrations/notion";
 import { composeProposal, type ProposalOutput } from "../../../lib/anthropic";
 import { renderProposalHtml } from "../integrations/proposal-render";
+import { truncate } from "../../../lib/format";
 
 export interface ProposalDraftResult {
   proposal: ProposalOutput;
@@ -304,8 +305,4 @@ async function slackPost(
   const data = (await res.json()) as { ok: boolean; ts?: string; error?: string };
   if (!data.ok) console.warn("slack_post_not_ok", { error: data.error });
   return data;
-}
-
-function truncate(s: string, n: number): string {
-  return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }

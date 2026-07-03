@@ -56,6 +56,10 @@ for n in ns:
     print(n['id']); break
 " || true)
 fi
+if [[ -z "$KV_ID" ]]; then
+  echo "ERROR: could not create or find KV namespace rt_sales_state — aborting before toml patch" >&2
+  exit 1
+fi
 echo "KV namespace id: $KV_ID"
 
 echo

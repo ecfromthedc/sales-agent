@@ -19,7 +19,7 @@ import { enrichFromChartmetric } from "../../../integrations/chartmetric";
 import { searchGmailHistory } from "../../../integrations/gmail";
 import { researchProspect } from "../../../integrations/web-research";
 import { lookupCRM, campaignToComparable } from "../integrations/crm-lookup";
-import { upsertDeal, type DealUpsertInput } from "../../../integrations/notion";
+import { upsertDeal } from "../../../integrations/notion";
 import { rankComparables, type ProspectSignal } from "../../../lib/comparables";
 import { composeBrief } from "../../../lib/anthropic";
 import { recordRun, recordError } from "../../../lib/run-state";
@@ -174,7 +174,9 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
     console.log("pre_call_brief_step", { step: "compose_done", briefLen: brief.length });
 
     console.log("pre_call_brief_step", { step: "notion_upsert_start" });
-    const pageId = await upsertDeal({
+    // Retry transient Notion blips — upsertDeal is idempotent (query-then-write
+    // keyed on invitee email + event URI), so a retry can't duplicate deals.
+    const pageId = await retry(() => upsertDeal({
       dealId: input.dealId,
       inviteeEmail: input.inviteeEmail,
       inviteeName: input.inviteeName,
@@ -184,7 +186,7 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       status: "Briefed",
       brief,
       enrichment,
-    }, env);
+    }, env), { retries: 2, baseDelayMs: 500 });
 
     // Post full brief to Slack (best-effort; notifySlack no-ops on missing
     // token/channel and never throws into the run path).

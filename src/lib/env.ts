@@ -44,5 +44,4 @@ export interface Env {
   // Optional at the type level so dev/test environments without the binding still
   // type-check; integrations/pdf.ts falls back to a pending key when it's absent.
   BROWSER?: BrowserWorker;
-  // AGENT_RUN: DurableObjectNamespace;
 }
