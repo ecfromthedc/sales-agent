@@ -36,8 +36,8 @@ Closes the lag between a Calendly strategy call and sending the pitch — target
 - **Store:** Notion (Deals, Transcripts, Pitch Artifacts DBs)
 - **Triggers:** Calendly webhooks/poll, Drive transcript poll, manual `POST /runs/:dealId/:agent`
 - **AI:** Anthropic Messages API via raw `fetch` in `src/lib/anthropic.ts` (not the Node SDK)
-  - Pre-call brief: **Sonnet** (`claude-sonnet-4-5-20250929`)
-  - Post-call pitch: **Opus + extended thinking** (`claude-opus-4-5-20250929`)
+  - Pre-call brief: **Sonnet** (`claude-sonnet-4-6`)
+  - Post-call pitch: **Opus + adaptive thinking** (`claude-opus-4-8`)
 - **PDF:** `src/integrations/pdf.ts` (Swiss Grid style)
 - **Artifacts:** R2 bucket `rt-sales-pitch-pdfs`, KV `STATE` for poll cursors
 

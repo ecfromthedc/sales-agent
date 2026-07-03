@@ -33,7 +33,7 @@ import { createGmailDraft } from "../../integrations/gmail";
 import type { TriagedMsg } from "./inbox";
 
 // Sonnet: fast, good tone for short professional replies (per RT CLAUDE.md).
-const MODEL_REPLY = "claude-sonnet-4-5-20250929"; // alias to current Sonnet 4.6
+const MODEL_REPLY = "claude-sonnet-4-6";
 
 /**
  * The address Henry stages reply drafts FROM. The draft lands in this mailbox's

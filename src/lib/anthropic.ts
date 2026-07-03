@@ -4,7 +4,8 @@
  *
  * Model strategy (per RT CLAUDE.md):
  *   - Sonnet 4.6 for the pre-call brief (fast, cheap, good enough)
- *   - Opus 4.5 with extended thinking for the post-call pitch (deep reasoning)
+ *   - Opus 4.8 with adaptive thinking for the post-call pitch/proposal
+ *     (budget_tokens is removed on Opus 4.7+ — adaptive is the only on-mode)
  */
 
 import {
@@ -26,8 +27,8 @@ export interface AnthropicEnv {
 const API_URL = "https://api.anthropic.com/v1/messages";
 const API_VERSION = "2023-06-01";
 
-const MODEL_BRIEF = "claude-sonnet-4-5-20250929";  // alias to current Sonnet 4.6
-const MODEL_PITCH = "claude-opus-4-5-20250929";    // alias to current Opus 4.5
+const MODEL_BRIEF = "claude-sonnet-4-6";
+const MODEL_PITCH = "claude-opus-4-8";
 
 export interface MessagesResponse {
   id: string;
@@ -46,7 +47,7 @@ export interface CallClaudeOptions {
   maxTokens: number;
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   system?: string;
-  thinking?: { type: "enabled"; budget_tokens: number };
+  thinking?: { type: "adaptive" };
 }
 
 /**
@@ -63,7 +64,7 @@ export async function callClaude(
     max_tokens: number;
     messages: Array<{ role: "user" | "assistant"; content: string }>;
     system?: string;
-    thinking?: { type: "enabled"; budget_tokens: number };
+    thinking?: { type: "adaptive" };
   } = { model, max_tokens: maxTokens, messages };
   if (system !== undefined) body.system = system;
   if (thinking !== undefined) body.thinking = thinking;
@@ -310,8 +311,9 @@ export async function composePitch(input: {
 }, env: AnthropicEnv): Promise<PitchOutput> {
   const res = await callClaude(env, {
     model: MODEL_PITCH,
-    maxTokens: 8192,
-    thinking: { type: "enabled", budget_tokens: 8000 },
+    // Adaptive thinking spends inside max_tokens — headroom for thinking + output.
+    maxTokens: 16000,
+    thinking: { type: "adaptive" },
     system: POST_CALL_PITCH_SYSTEM,
     messages: [
       {
@@ -357,8 +359,9 @@ export async function composeProposal(input: {
 
   const res = await callClaude(env, {
     model: MODEL_PITCH,
-    maxTokens: 12000,
-    thinking: { type: "enabled", budget_tokens: 8000 },
+    // Adaptive thinking spends inside max_tokens — headroom for thinking + output.
+    maxTokens: 16000,
+    thinking: { type: "adaptive" },
     system: PROPOSAL_SYSTEM,
     messages: [
       {

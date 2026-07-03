@@ -29,7 +29,7 @@ Proactive outbound lead generation — finds labels/artists RT should pitch, wat
 - **Store:** Notion (Leads DB, Labels DB, Artists DB, Outreach Log DB)
 - **Data Sources:** Spotify (releases, artist roster), Gmail (relationship history), Notion CRM (existing clients)
 - **AI:** Anthropic Messages API via raw `fetch` (Workers-compatible)
-  - Lead scoring / gap analysis: **Sonnet** (`claude-sonnet-4-5-20250929`)
+  - Lead scoring / gap analysis: **Sonnet** (`claude-sonnet-4-6`)
   - Outreach email drafts: **Sonnet** (fast, good tone)
 - **Artifacts:** KV `OUTREACH_STATE` for poll cursors and watcher state
 

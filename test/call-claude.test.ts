@@ -44,7 +44,7 @@ describe("callClaude", () => {
     mockFetch(() => jsonResponse(OK_BODY));
 
     const res = await callClaude(env, {
-      model: "claude-sonnet-4-5-20250929",
+      model: "claude-sonnet-4-6",
       maxTokens: 1024,
       messages: [{ role: "user", content: "hi" }],
     });
@@ -58,7 +58,7 @@ describe("callClaude", () => {
     const spy = mockFetch(() => jsonResponse(OK_BODY));
 
     await callClaude(env, {
-      model: "claude-sonnet-4-5-20250929",
+      model: "claude-sonnet-4-6",
       maxTokens: 1024,
       messages: [{ role: "user", content: "hi" }],
     });
@@ -77,7 +77,7 @@ describe("callClaude", () => {
     const spy = mockFetch(() => jsonResponse(OK_BODY));
 
     await callClaude(env, {
-      model: "claude-opus-4-5-20250929",
+      model: "claude-opus-4-8",
       maxTokens: 8192,
       system: "you are a test",
       messages: [
@@ -89,7 +89,7 @@ describe("callClaude", () => {
     const [, init] = spy.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
     expect(body).toMatchObject({
-      model: "claude-opus-4-5-20250929",
+      model: "claude-opus-4-8",
       max_tokens: 8192,
       system: "you are a test",
       messages: [
@@ -105,22 +105,22 @@ describe("callClaude", () => {
     const spy = mockFetch(() => jsonResponse(OK_BODY));
 
     await callClaude(env, {
-      model: "claude-opus-4-5-20250929",
+      model: "claude-opus-4-8",
       maxTokens: 8192,
-      thinking: { type: "enabled", budget_tokens: 8000 },
+      thinking: { type: "adaptive" },
       messages: [{ role: "user", content: "hi" }],
     });
 
     const [, init] = spy.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
-    expect(body.thinking).toEqual({ type: "enabled", budget_tokens: 8000 });
+    expect(body.thinking).toEqual({ type: "adaptive" });
   });
 
   it("omits optional fields when not provided", async () => {
     const spy = mockFetch(() => jsonResponse(OK_BODY));
 
     await callClaude(env, {
-      model: "claude-sonnet-4-5-20250929",
+      model: "claude-sonnet-4-6",
       maxTokens: 1024,
       messages: [{ role: "user", content: "hi" }],
     });
@@ -136,7 +136,7 @@ describe("callClaude", () => {
 
     await expect(
       callClaude(env, {
-        model: "claude-sonnet-4-5-20250929",
+        model: "claude-sonnet-4-6",
         maxTokens: 1024,
         messages: [{ role: "user", content: "hi" }],
       }),
