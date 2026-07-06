@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { callClaude, extractText } from "../src/lib/anthropic";
+import { callClaude, extractText, researchWithWebSearch, composeBrief } from "../src/lib/anthropic";
 import type { MessagesResponse } from "../src/lib/anthropic";
 import type { Env } from "../src/lib/env";
 
@@ -141,6 +141,105 @@ describe("callClaude", () => {
         messages: [{ role: "user", content: "hi" }],
       }),
     ).rejects.toThrow(/anthropic_429: rate limited/);
+  });
+});
+
+// 2026-07-06: LLM_PROVIDER="deepseek" routes every call to DeepSeek's
+// Anthropic-compatible endpoint (Anthropic account billing outage). These lock
+// the switch: URL, key selection, model mapping, thinking passthrough, and the
+// hard refusal of web research (DeepSeek silently ignores the web_search tool,
+// which would put ungrounded prose in client-facing briefs).
+describe("callClaude — LLM_PROVIDER=deepseek", () => {
+  const dsEnv = {
+    ANTHROPIC_API_KEY: "sk-ant-unused",
+    DEEPSEEK_API_KEY: "sk-ds-test",
+    LLM_PROVIDER: "deepseek",
+  } as unknown as Env;
+
+  it("routes to the DeepSeek compat endpoint with the DeepSeek key and mapped model", async () => {
+    const spy = mockFetch(() => jsonResponse(OK_BODY));
+
+    await callClaude(dsEnv, {
+      model: "claude-opus-4-8",
+      maxTokens: 8192,
+      thinking: { type: "adaptive" },
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    const [url, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.deepseek.com/anthropic/v1/messages");
+    const headers = init.headers as Record<string, string>;
+    expect(headers["x-api-key"]).toBe("sk-ds-test");
+    const body = JSON.parse(init.body as string);
+    // Every Claude model maps to the one DeepSeek model; thinking passes through
+    // (v4-pro supports it natively).
+    expect(body.model).toBe("deepseek-v4-pro");
+    expect(body.thinking).toEqual({ type: "adaptive" });
+  });
+
+  it("throws when LLM_PROVIDER=deepseek but DEEPSEEK_API_KEY is unset", async () => {
+    const spy = mockFetch(() => jsonResponse(OK_BODY));
+
+    await expect(
+      callClaude({ ANTHROPIC_API_KEY: "sk", LLM_PROVIDER: "deepseek" } as unknown as Env, {
+        model: "claude-sonnet-4-6",
+        maxTokens: 100,
+        messages: [{ role: "user", content: "hi" }],
+      }),
+    ).rejects.toThrow(/llm_provider_deepseek_missing_key/);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("an unset LLM_PROVIDER still routes to Anthropic with the Anthropic key", async () => {
+    const spy = mockFetch(() => jsonResponse(OK_BODY));
+
+    await callClaude(env, {
+      model: "claude-sonnet-4-6",
+      maxTokens: 100,
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    const [url, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.anthropic.com/v1/messages");
+    expect((init.headers as Record<string, string>)["x-api-key"]).toBe("sk-test-key");
+  });
+
+  it("researchWithWebSearch refuses under deepseek without touching the network", async () => {
+    const spy = mockFetch(() => jsonResponse(OK_BODY));
+
+    await expect(
+      researchWithWebSearch(dsEnv, { prompt: "who is X", system: "research" }),
+    ).rejects.toThrow(/web_search_unsupported/);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("composeBrief throws on a thinking-only response instead of returning an empty brief", async () => {
+    // Regression: v4-pro burned the whole 2048 max_tokens on thinking, the run
+    // "succeeded" with briefLen 0, upserted a blank deal, and Slack rejected
+    // the empty section block (invalid_blocks). Empty compose = hard failure.
+    mockFetch(() =>
+      jsonResponse({
+        id: "msg_t",
+        content: [{ type: "thinking" }],
+        stop_reason: "max_tokens",
+        usage: { input_tokens: 10, output_tokens: 2048 },
+      }),
+    );
+
+    await expect(
+      composeBrief(
+        {
+          invitee: {
+            inviteeEmail: "a@b.c",
+            inviteeName: "A",
+            eventStartsAt: "2026-07-07T00:00:00Z",
+            questionsAndAnswers: [],
+          },
+          enrichment: {},
+        },
+        dsEnv,
+      ),
+    ).rejects.toThrow(/compose_brief_empty/);
   });
 });
 

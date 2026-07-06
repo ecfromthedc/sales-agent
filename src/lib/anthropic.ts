@@ -6,6 +6,13 @@
  *   - Sonnet 4.6 for the pre-call brief (fast, cheap, good enough)
  *   - Opus 4.8 with adaptive thinking for the post-call pitch/proposal
  *     (budget_tokens is removed on Opus 4.7+ — adaptive is the only on-mode)
+ *
+ * Provider override (2026-07-06, Anthropic billing outage): setting
+ * `LLM_PROVIDER = "deepseek"` routes every call to DeepSeek's Anthropic-
+ * compatible endpoint as `deepseek-v4-pro` (accepts the same Messages body,
+ * including `thinking`). Web research is DISABLED under DeepSeek — the compat
+ * layer silently IGNORES the `web_search` server tool and answers from
+ * training data, which would put ungrounded prose in a client-facing brief.
  */
 
 import {
@@ -22,6 +29,10 @@ import {
  */
 export interface AnthropicEnv {
   ANTHROPIC_API_KEY: string;
+  /** "deepseek" ⇒ route all calls to DeepSeek's Anthropic-compat endpoint. Unset/other ⇒ Anthropic. */
+  LLM_PROVIDER?: string;
+  /** Required when LLM_PROVIDER is "deepseek". */
+  DEEPSEEK_API_KEY?: string;
 }
 
 const API_URL = "https://api.anthropic.com/v1/messages";
@@ -29,6 +40,38 @@ const API_VERSION = "2023-06-01";
 
 const MODEL_BRIEF = "claude-sonnet-4-6";
 const MODEL_PITCH = "claude-opus-4-8";
+
+const DEEPSEEK_API_URL = "https://api.deepseek.com/anthropic/v1/messages";
+// ponytail: one model for everything on DeepSeek. v4-pro handles thinking
+// natively and pricing makes a flash/pro split not worth the branch.
+const DEEPSEEK_MODEL = "deepseek-v4-pro";
+
+interface Provider {
+  url: string;
+  apiKey: string;
+  mapModel: (model: string) => string;
+  isDeepseek: boolean;
+}
+
+function providerFor(env: AnthropicEnv): Provider {
+  if (env.LLM_PROVIDER === "deepseek") {
+    if (!env.DEEPSEEK_API_KEY) {
+      throw new Error("llm_provider_deepseek_missing_key: DEEPSEEK_API_KEY is unset");
+    }
+    return {
+      url: DEEPSEEK_API_URL,
+      apiKey: env.DEEPSEEK_API_KEY,
+      mapModel: () => DEEPSEEK_MODEL,
+      isDeepseek: true,
+    };
+  }
+  return {
+    url: API_URL,
+    apiKey: env.ANTHROPIC_API_KEY,
+    mapModel: (m) => m,
+    isDeepseek: false,
+  };
+}
 
 export interface MessagesResponse {
   id: string;
@@ -69,10 +112,13 @@ export async function callClaude(
   if (system !== undefined) body.system = system;
   if (thinking !== undefined) body.thinking = thinking;
 
-  const res = await fetch(API_URL, {
+  const provider = providerFor(env);
+  body.model = provider.mapModel(model);
+
+  const res = await fetch(provider.url, {
     method: "POST",
     headers: {
-      "x-api-key": env.ANTHROPIC_API_KEY,
+      "x-api-key": provider.apiKey,
       "anthropic-version": API_VERSION,
       "content-type": "application/json",
     },
@@ -108,6 +154,13 @@ export async function researchWithWebSearch(
   env: AnthropicEnv,
   params: { prompt: string; system: string; maxUses?: number },
 ): Promise<WebResearchResult> {
+  // DeepSeek's compat layer accepts a web_search tool request but silently
+  // ignores it and answers from training data — that's ungrounded text
+  // masquerading as research. Refuse loudly; the brief's enrichment layer
+  // treats this as a normal best-effort failure ("no web data").
+  if (providerFor(env).isDeepseek) {
+    throw new Error("web_search_unsupported: LLM_PROVIDER=deepseek ignores the web_search tool");
+  }
   type Block = { type: string; text?: string; citations?: Array<Record<string, unknown>> };
   const messages: Array<{ role: "user" | "assistant"; content: string | Block[] }> = [
     { role: "user", content: params.prompt },
@@ -186,7 +239,11 @@ export async function composeBrief(input: {
 }, env: AnthropicEnv): Promise<string> {
   const res = await callClaude(env, {
     model: MODEL_BRIEF,
-    maxTokens: 2048,
+    // 8192, not 2048: deepseek-v4-pro always emits thinking blocks (even when
+    // not requested) INSIDE max_tokens — 2048 got fully consumed by reasoning
+    // and produced a zero-length brief. A cap is not a spend target, so this
+    // is free on providers that don't think.
+    maxTokens: 8192,
     system: PRE_CALL_BRIEF_SYSTEM,
     messages: [
       {
@@ -195,7 +252,15 @@ export async function composeBrief(input: {
       },
     ],
   });
-  return extractText(res);
+  const brief = extractText(res).trim();
+  // An empty brief must FAIL the run (→ Slack alert + poll retry), never
+  // "succeed" into a blank Notion deal + invalid_blocks Slack post.
+  if (!brief) {
+    throw new Error(
+      `compose_brief_empty: no text block (stop_reason=${res.stop_reason}, output_tokens=${res.usage.output_tokens})`,
+    );
+  }
+  return brief;
 }
 
 const PRE_CALL_BRIEF_SYSTEM = `You write pre-call briefs for Eric Cromartie, founder of Rising Tides (music marketing agency). He reads these 30 seconds before a sales call.
