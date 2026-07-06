@@ -52,6 +52,12 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
   const startedAt = Date.now();
   console.log("pre_call_brief_start", { invitee: input.inviteeEmail });
 
+  const meetingTime = new Date(input.eventStartsAt).toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short", month: "short", day: "numeric",
+    hour: "numeric", minute: "2-digit",
+  });
+
   try {
     // Resolve the artist's Spotify link. Eric's form has a dedicated "Spotify
     // link" question; Seeno's intake is free-text, so we also scan every answer
@@ -190,11 +196,6 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
 
     // Post full brief to Slack (best-effort; notifySlack no-ops on missing
     // token/channel and never throws into the run path).
-    const meetingTime = new Date(input.eventStartsAt).toLocaleString("en-US", {
-      timeZone: "America/New_York",
-      weekday: "short", month: "short", day: "numeric",
-      hour: "numeric", minute: "2-digit",
-    });
     await notifySlack(
       env,
       input.slackChannelId ?? env.SLACK_BRIEF_CHANNEL_ID,
@@ -220,6 +221,16 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       stack: e.stack?.split("\n").slice(0, 6).join(" | "),
     });
     await recordError(env, "brief");
+    // Loud failure: 14 bookings were dropped silently in June '26 when the
+    // Anthropic account ran dry — the error only lived in logs and /status.
+    // Alert the same channel the brief would have landed in. Best-effort:
+    // notifySlack never throws into this path.
+    await notifySlack(env, input.slackChannelId ?? env.SLACK_BRIEF_CHANNEL_ID, {
+      text:
+        `⚠️ Pre-call brief FAILED — *${input.inviteeName}* (${input.inviteeEmail}), ` +
+        `meeting ${meetingTime}.\nError: \`${e.message.slice(0, 500)}\`\n` +
+        `The poll retries automatically; if this repeats, the pipeline needs a human.`,
+    });
     throw err;
   }
 }

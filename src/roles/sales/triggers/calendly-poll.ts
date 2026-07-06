@@ -11,15 +11,26 @@
  * Dedup is handled by `upsertDeal` (filter by invitee email + event URI), so
  * re-running the same event is idempotent. The per-source KV cursor narrows the
  * query window so we don't re-process the whole future calendar every tick.
+ * The cursor only advances past processed events — a failed brief holds it and
+ * is retried on later ticks (capped at MAX_BRIEF_ATTEMPTS, then a Slack alert).
  */
 
 import type { Env } from "../../../lib/env";
 import { runPreCallBrief } from "../agents/pre-call-brief";
+import { notifySlack } from "../../../integrations/slack";
 import { CALENDLY_SOURCES, type CalendlySource } from "../config/calendly-sources";
 
 const CURSOR_PREFIX = "calendly-poll:cursor";
 const LOOKBACK_MS = 30 * 60 * 1000; // first run: look back 30 min
 const CALENDLY_API = "https://api.calendly.com";
+
+// A failed booking is retried on later ticks (cursor holds before it) up to
+// this many attempts, then skipped with a loud Slack alert. The cap keeps a
+// poisoned event (e.g. a multi-week Anthropic billing outage) from burning
+// enrichment budgets — Chartmetric alone is 3 calls/attempt on a 200/day cap.
+const MAX_BRIEF_ATTEMPTS = 5;
+const ATTEMPTS_PREFIX = "brief-attempts";
+const ATTEMPTS_TTL_S = 7 * 24 * 3600;
 
 // Calendly requires the organization param to read events for any member other
 // than the token owner ("Please also specify organization when requesting
@@ -80,26 +91,37 @@ async function pollSource(
   const eventsBody = (await eventsRes.json()) as CalendlyEventList;
   const events = eventsBody.collection ?? [];
 
-  // Process events created after the cursor.
-  const newEvents = events.filter((e) => e.created_at > cursor);
+  // Process events created after the cursor, oldest-created first so the
+  // cursor can advance strictly in creation order.
+  const newEvents = events
+    .filter((e) => e.created_at > cursor)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
   const channelId = source.briefChannelId(env);
 
+  // The cursor only advances past events that were processed (briefed,
+  // canceled, or given up on). It used to jump to now() unconditionally, which
+  // silently dropped every booking whose brief threw — 14 bookings lost in
+  // June '26 during an Anthropic billing outage. A failed event now holds the
+  // cursor, gets retried on later ticks, and is only skipped after
+  // MAX_BRIEF_ATTEMPTS with a Slack alert.
   let briefed = 0;
+  let advanceTo = cursor;
   for (const event of newEvents) {
-    if (event.status !== "active") continue;
+    if (event.status !== "active") {
+      advanceTo = event.created_at;
+      continue;
+    }
     try {
       const inviteesRes = await fetch(`${event.uri}/invitees?status=active`, {
         headers: { authorization: `Bearer ${env.CALENDLY_PERSONAL_ACCESS_TOKEN}` },
       });
       if (!inviteesRes.ok) {
-        console.warn("calendly_invitees_failed", {
-          source: source.label,
-          event: event.uri,
-          status: inviteesRes.status,
-        });
-        continue;
+        throw new Error(`calendly_invitees_failed: ${inviteesRes.status}`);
       }
       const inviteesBody = (await inviteesRes.json()) as CalendlyInviteeList;
+      // ponytail: a retried multi-invitee event re-runs already-briefed
+      // invitees (upsertDeal dedups the Notion side; Slack repost possible).
+      // Strategy calls are 1:1, so per-invitee checkpointing isn't worth it.
       for (const invitee of inviteesBody.collection ?? []) {
         await runPreCallBrief(
           {
@@ -114,16 +136,35 @@ async function pollSource(
         );
         briefed++;
       }
+      advanceTo = event.created_at;
     } catch (err) {
+      const attemptsKey = `${ATTEMPTS_PREFIX}:${event.uri}`;
+      const attempts =
+        Number.parseInt((await env.STATE.get(attemptsKey)) ?? "0", 10) + 1;
+      await env.STATE.put(attemptsKey, String(attempts), {
+        expirationTtl: ATTEMPTS_TTL_S,
+      });
       console.error("calendly_poll_event_error", {
         source: source.label,
         event: event.uri,
+        attempt: attempts,
         err: (err as Error).message,
       });
+      if (attempts >= MAX_BRIEF_ATTEMPTS) {
+        await notifySlack(env, channelId, {
+          text:
+            `🚨 Giving up on the pre-call brief for a ${source.label} Calendly booking ` +
+            `(${event.start_time}) after ${attempts} attempts.\n` +
+            `Last error: \`${(err as Error).message.slice(0, 300)}\`\n${event.uri}`,
+        });
+        advanceTo = event.created_at; // skip permanently — loudly, never silently
+        continue;
+      }
+      break; // hold the cursor here; retry this event next tick, keep order
     }
   }
 
-  await env.STATE.put(cursorKey, new Date().toISOString());
+  if (advanceTo !== cursor) await env.STATE.put(cursorKey, advanceTo);
   console.log("calendly_poll_source_done", {
     source: source.label,
     events: events.length,
