@@ -204,13 +204,62 @@ describe("callClaude — LLM_PROVIDER=deepseek", () => {
     expect((init.headers as Record<string, string>)["x-api-key"]).toBe("sk-test-key");
   });
 
-  it("researchWithWebSearch refuses under deepseek without touching the network", async () => {
+  it("researchWithWebSearch refuses under deepseek WITHOUT a Gemini key, no network", async () => {
     const spy = mockFetch(() => jsonResponse(OK_BODY));
 
     await expect(
       researchWithWebSearch(dsEnv, { prompt: "who is X", system: "research" }),
     ).rejects.toThrow(/web_search_unsupported/);
     expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("researchWithWebSearch routes to Gemini google_search grounding under deepseek + GEMINI_API_KEY", async () => {
+    const geminiEnv = { ...(dsEnv as object), GEMINI_API_KEY: "AIza-test" } as unknown as Env;
+    const spy = mockFetch(() =>
+      jsonResponse({
+        candidates: [
+          {
+            content: { parts: [{ text: "Grounded research about X." }] },
+            groundingMetadata: {
+              groundingChunks: [
+                { web: { uri: "https://a.example/1", title: "a.example" } },
+                { web: { uri: "https://a.example/1", title: "a.example" } }, // dup → dedup
+                { web: { uri: "https://b.example/2", title: "b.example" } },
+              ],
+            },
+          },
+        ],
+      }),
+    );
+
+    const result = await researchWithWebSearch(geminiEnv, {
+      prompt: "who is X",
+      system: "research system",
+    });
+
+    const [url, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("generativelanguage.googleapis.com");
+    expect(url).toContain("gemini-2.5-flash:generateContent");
+    const headers = init.headers as Record<string, string>;
+    expect(headers["x-goog-api-key"]).toBe("AIza-test");
+    const body = JSON.parse(init.body as string);
+    expect(body.tools).toEqual([{ google_search: {} }]);
+    expect(body.systemInstruction.parts[0].text).toBe("research system");
+
+    expect(result.text).toBe("Grounded research about X.");
+    expect(result.citations).toEqual([
+      { url: "https://a.example/1", title: "a.example" },
+      { url: "https://b.example/2", title: "b.example" },
+    ]);
+  });
+
+  it("Gemini research throws on non-2xx with a tagged error", async () => {
+    const geminiEnv = { ...(dsEnv as object), GEMINI_API_KEY: "AIza-test" } as unknown as Env;
+    mockFetch(() => new Response("quota exceeded", { status: 429 }));
+
+    await expect(
+      researchWithWebSearch(geminiEnv, { prompt: "x", system: "s" }),
+    ).rejects.toThrow(/gemini_429: quota exceeded/);
   });
 
   it("composeBrief throws on a thinking-only response instead of returning an empty brief", async () => {

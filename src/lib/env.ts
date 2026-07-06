@@ -22,6 +22,7 @@ export interface Env {
   RAPIDAPI_KEY: string;
   CHARTMETRIC_REFRESH_TOKEN?: string;    // optional; long-lived, exchanged for 1h access tokens (no-ops if unset)
   DEEPSEEK_API_KEY?: string;             // optional; required when LLM_PROVIDER = "deepseek"
+  GEMINI_API_KEY?: string;               // optional; Gemini-grounded web research when the LLM provider can't search (deepseek)
   FIREFLIES_API_KEY?: string;            // optional; fetches transcripts from Fireflies (no-ops if unset)
   FIREFLIES_WEBHOOK_SECRET?: string;     // optional; verifies Fireflies webhook signatures (skips verify if unset)
   SLACK_SIGNING_SECRET?: string;         // optional; verifies Slack Events API requests (rejects if unset)

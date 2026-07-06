@@ -14,3 +14,4 @@ GRANOLA_WEBHOOK_SIGNING_KEY=
 TIDES_TRACKER_API_KEY=
 RAPIDAPI_KEY=
 SLACK_BOT_TOKEN=
+GEMINI_API_KEY=            # Gemini-grounded web research when LLM_PROVIDER = "deepseek"

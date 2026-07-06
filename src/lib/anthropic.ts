@@ -10,9 +10,11 @@
  * Provider override (2026-07-06, Anthropic billing outage): setting
  * `LLM_PROVIDER = "deepseek"` routes every call to DeepSeek's Anthropic-
  * compatible endpoint as `deepseek-v4-pro` (accepts the same Messages body,
- * including `thinking`). Web research is DISABLED under DeepSeek — the compat
- * layer silently IGNORES the `web_search` server tool and answers from
- * training data, which would put ungrounded prose in a client-facing brief.
+ * including `thinking`). Web research under DeepSeek goes through Gemini's
+ * Google Search grounding (lib/gemini.ts) — DeepSeek's compat layer silently
+ * IGNORES the `web_search` server tool and answers from training data, which
+ * would put ungrounded prose in a client-facing brief. No GEMINI_API_KEY ⇒
+ * research fails loudly instead.
  */
 
 import {
@@ -20,6 +22,7 @@ import {
   orderSections,
   sectionsPromptBlock,
 } from "./pitch-sections";
+import { researchWithGeminiSearch } from "./gemini";
 
 /**
  * Minimal structural env for {@link callClaude}. Narrowed from the concrete
@@ -33,6 +36,8 @@ export interface AnthropicEnv {
   LLM_PROVIDER?: string;
   /** Required when LLM_PROVIDER is "deepseek". */
   DEEPSEEK_API_KEY?: string;
+  /** Enables Gemini-grounded web research when the LLM provider can't search (deepseek). */
+  GEMINI_API_KEY?: string;
 }
 
 const API_URL = "https://api.anthropic.com/v1/messages";
@@ -156,9 +161,11 @@ export async function researchWithWebSearch(
 ): Promise<WebResearchResult> {
   // DeepSeek's compat layer accepts a web_search tool request but silently
   // ignores it and answers from training data — that's ungrounded text
-  // masquerading as research. Refuse loudly; the brief's enrichment layer
-  // treats this as a normal best-effort failure ("no web data").
+  // masquerading as research. Route research to Gemini's Google Search
+  // grounding instead; without a Gemini key, refuse loudly so the brief's
+  // enrichment layer treats it as a normal best-effort failure ("no web data").
   if (providerFor(env).isDeepseek) {
+    if (env.GEMINI_API_KEY) return researchWithGeminiSearch(env, params);
     throw new Error("web_search_unsupported: LLM_PROVIDER=deepseek ignores the web_search tool");
   }
   type Block = { type: string; text?: string; citations?: Array<Record<string, unknown>> };
