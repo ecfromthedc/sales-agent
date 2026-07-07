@@ -20,6 +20,7 @@ export interface Env {
   TIDES_TRACKER_BASE_URL?: string;       // optional; deprecated Tides Tracker host (crm-lookup is canonical)
   TEST_AUTH_KEY: string;
   CHARTMETRIC_REFRESH_TOKEN?: string;    // optional; long-lived, exchanged for 1h access tokens (no-ops if unset)
+  RAPIDAPI_KEY?: string;                 // optional; Songstats gap-filler (total streams, socials CM lacks) — no-ops if unset
   GEMINI_API_KEY?: string;               // optional; required when LLM_PROVIDER = "gemini" (composition + grounded web research)
   FIREFLIES_API_KEY?: string;            // optional; fetches transcripts from Fireflies (no-ops if unset)
   FIREFLIES_WEBHOOK_SECRET?: string;     // optional; verifies Fireflies webhook signatures (skips verify if unset)

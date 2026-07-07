@@ -14,6 +14,7 @@
 
 import type { Env } from "../../../lib/env";
 import { enrichFromSpotify } from "../../../integrations/spotify";
+import { enrichFromSongstats } from "../../../integrations/songstats";
 import { enrichFromChartmetric } from "../../../integrations/chartmetric";
 import { searchGmailHistory } from "../../../integrations/gmail";
 import { researchProspect } from "../../../integrations/web-research";
@@ -75,12 +76,13 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       ? spotifyLink.match(/artist\/([a-zA-Z0-9]{22})/)?.[1] ?? null
       : null;
 
-    // Phase 1: Spotify + Chartmetric + Gmail + web research in parallel.
-    // Each call is retried independently with exponential backoff; allSettled
-    // keeps partial failures from blocking the others. Web research always
-    // runs so there's a picture even when no Spotify link / no streaming data
-    // is available.
-    const [spotify, chartmetric, gmail, web] = await Promise.allSettled([
+    // Phase 1: Spotify + Chartmetric + Songstats + Gmail + web research in
+    // parallel. Chartmetric is the authoritative numbers source; Songstats
+    // rides along purely as a gap-filler for stats Chartmetric lacks (total
+    // catalog streams, socials/links CM doesn't track for this artist). Each
+    // call is retried independently with exponential backoff; allSettled
+    // keeps partial failures from blocking the others.
+    const [spotify, chartmetric, songstats, gmail, web] = await Promise.allSettled([
       spotifyLink
         ? retry(() => enrichFromSpotify(spotifyLink, env), ENRICH_RETRY)
         : Promise.resolve(null),
@@ -88,6 +90,9 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
         () => enrichFromChartmetric({ spotifyArtistId, artistName: input.inviteeName }, env),
         ENRICH_RETRY,
       ),
+      spotifyArtistId
+        ? retry(() => enrichFromSongstats(spotifyArtistId, env), ENRICH_RETRY)
+        : Promise.resolve(null),
       retry(() => searchGmailHistory(input.inviteeEmail, env), ENRICH_RETRY),
       retry(
         () =>
@@ -102,7 +107,8 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
     // Phase 2: CRM lookup — uses the Chartmetric artist name when available,
     // falls back to the invitee name.
     const chartmetricData = chartmetric.status === "fulfilled" ? chartmetric.value : null;
-    const artistName = chartmetricData?.name ?? input.inviteeName;
+    const songstatsData = songstats.status === "fulfilled" ? songstats.value : null;
+    const artistName = chartmetricData?.name ?? songstatsData?.name ?? input.inviteeName;
     const relatedArtists = chartmetricData?.relatedArtists;
 
     // Extract label from Songstats platform links or notes
@@ -121,11 +127,13 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       step: "enrichment_done",
       spotify: spotify.status,
       chartmetric: chartmetric.status,
+      songstats: songstats.status,
       gmail: gmail.status,
       web: web.status,
       crmMatches: crmLookup.totalCampaignsFound,
       spotifyErr: spotify.status === "rejected" ? (spotify.reason as Error)?.message : undefined,
       chartmetricErr: chartmetric.status === "rejected" ? (chartmetric.reason as Error)?.message : undefined,
+      songstatsErr: songstats.status === "rejected" ? (songstats.reason as Error)?.message : undefined,
       gmailErr: gmail.status === "rejected" ? (gmail.reason as Error)?.message : undefined,
       webErr: web.status === "rejected" ? (web.reason as Error)?.message : undefined,
     });
@@ -168,11 +176,12 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
     const enrichment = {
       spotify: spotifyData,
       chartmetric: chartmetricData,
+      songstats: songstatsData,
       gmail: gmail.status === "fulfilled" ? gmail.value : null,
       web: web.status === "fulfilled" ? web.value : null,
       crm: crmLookup,
       comparables,
-      failures: [spotify, chartmetric, gmail, web]
+      failures: [spotify, chartmetric, songstats, gmail, web]
         .filter((r) => r.status === "rejected")
         .map((r) => (r as PromiseRejectedResult).reason?.message ?? "unknown"),
     };
