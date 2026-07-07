@@ -21,8 +21,7 @@ export interface Env {
   TEST_AUTH_KEY: string;
   RAPIDAPI_KEY: string;
   CHARTMETRIC_REFRESH_TOKEN?: string;    // optional; long-lived, exchanged for 1h access tokens (no-ops if unset)
-  DEEPSEEK_API_KEY?: string;             // optional; required when LLM_PROVIDER = "deepseek"
-  GEMINI_API_KEY?: string;               // optional; Gemini-grounded web research when the LLM provider can't search (deepseek)
+  GEMINI_API_KEY?: string;               // optional; required when LLM_PROVIDER = "gemini" (composition + grounded web research)
   FIREFLIES_API_KEY?: string;            // optional; fetches transcripts from Fireflies (no-ops if unset)
   FIREFLIES_WEBHOOK_SECRET?: string;     // optional; verifies Fireflies webhook signatures (skips verify if unset)
   SLACK_SIGNING_SECRET?: string;         // optional; verifies Slack Events API requests (rejects if unset)
@@ -38,7 +37,7 @@ export interface Env {
   SLACK_PROPOSALS_CHANNEL_ID?: string;   // optional; post-call pitch notices (no-ops if unset)
   SLACK_EMAIL_DIGEST_CHANNEL_ID?: string; // optional; inbox triage digest notices (no-ops if unset)
   PUBLIC_BASE_URL?: string;              // optional; e.g. https://rt-sales-call-agent.<sub>.workers.dev — for proposal live links
-  LLM_PROVIDER?: string;                 // optional; "deepseek" routes all LLM calls to DeepSeek's Anthropic-compat endpoint (web research disabled)
+  LLM_PROVIDER?: string;                 // optional; "gemini" routes composition + web research to Gemini. Unset ⇒ Anthropic.
 
   // Bindings
   PITCH_PDFS: R2Bucket;

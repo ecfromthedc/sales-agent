@@ -2,7 +2,6 @@
 # For production, set via `wrangler secret put <NAME>`.
 
 ANTHROPIC_API_KEY=
-DEEPSEEK_API_KEY=          # required when LLM_PROVIDER = "deepseek" (wrangler.toml)
 NOTION_API_KEY=
 CALENDLY_WEBHOOK_SIGNING_KEY=
 SPOTIFY_CLIENT_ID=
@@ -14,4 +13,4 @@ GRANOLA_WEBHOOK_SIGNING_KEY=
 TIDES_TRACKER_API_KEY=
 RAPIDAPI_KEY=
 SLACK_BOT_TOKEN=
-GEMINI_API_KEY=            # Gemini-grounded web research when LLM_PROVIDER = "deepseek"
+GEMINI_API_KEY=            # required when LLM_PROVIDER = "gemini" (composition + grounded web research)

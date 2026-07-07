@@ -8,13 +8,12 @@
  *     (budget_tokens is removed on Opus 4.7+ — adaptive is the only on-mode)
  *
  * Provider override (2026-07-06, Anthropic billing outage): setting
- * `LLM_PROVIDER = "deepseek"` routes every call to DeepSeek's Anthropic-
- * compatible endpoint as `deepseek-v4-pro` (accepts the same Messages body,
- * including `thinking`). Web research under DeepSeek goes through Gemini's
- * Google Search grounding (lib/gemini.ts) — DeepSeek's compat layer silently
- * IGNORES the `web_search` server tool and answers from training data, which
- * would put ungrounded prose in a client-facing brief. No GEMINI_API_KEY ⇒
- * research fails loudly instead.
+ * `LLM_PROVIDER = "gemini"` routes every compose call through the adapter in
+ * lib/gemini.ts (brief-tier → gemini-2.5-flash, opus-tier → gemini-2.5-pro)
+ * and web research through Gemini's Google Search grounding. Unset ⇒ native
+ * Anthropic (requires a funded ANTHROPIC_API_KEY). A DeepSeek path existed
+ * for a few hours on 2026-07-06 and was removed same-day per Eric — Gemini
+ * covers both jobs on one key.
  */
 
 import {
@@ -22,7 +21,7 @@ import {
   orderSections,
   sectionsPromptBlock,
 } from "./pitch-sections";
-import { researchWithGeminiSearch } from "./gemini";
+import { callGemini, researchWithGeminiSearch } from "./gemini";
 
 /**
  * Minimal structural env for {@link callClaude}. Narrowed from the concrete
@@ -32,11 +31,9 @@ import { researchWithGeminiSearch } from "./gemini";
  */
 export interface AnthropicEnv {
   ANTHROPIC_API_KEY: string;
-  /** "deepseek" ⇒ route all calls to DeepSeek's Anthropic-compat endpoint. Unset/other ⇒ Anthropic. */
+  /** "gemini" ⇒ compose via lib/gemini.ts + Gemini-grounded research. Unset/other ⇒ Anthropic. */
   LLM_PROVIDER?: string;
-  /** Required when LLM_PROVIDER is "deepseek". */
-  DEEPSEEK_API_KEY?: string;
-  /** Enables Gemini-grounded web research when the LLM provider can't search (deepseek). */
+  /** Required when LLM_PROVIDER is "gemini". */
   GEMINI_API_KEY?: string;
 }
 
@@ -45,38 +42,6 @@ const API_VERSION = "2023-06-01";
 
 const MODEL_BRIEF = "claude-sonnet-4-6";
 const MODEL_PITCH = "claude-opus-4-8";
-
-const DEEPSEEK_API_URL = "https://api.deepseek.com/anthropic/v1/messages";
-// ponytail: one model for everything on DeepSeek. v4-pro handles thinking
-// natively and pricing makes a flash/pro split not worth the branch.
-const DEEPSEEK_MODEL = "deepseek-v4-pro";
-
-interface Provider {
-  url: string;
-  apiKey: string;
-  mapModel: (model: string) => string;
-  isDeepseek: boolean;
-}
-
-function providerFor(env: AnthropicEnv): Provider {
-  if (env.LLM_PROVIDER === "deepseek") {
-    if (!env.DEEPSEEK_API_KEY) {
-      throw new Error("llm_provider_deepseek_missing_key: DEEPSEEK_API_KEY is unset");
-    }
-    return {
-      url: DEEPSEEK_API_URL,
-      apiKey: env.DEEPSEEK_API_KEY,
-      mapModel: () => DEEPSEEK_MODEL,
-      isDeepseek: true,
-    };
-  }
-  return {
-    url: API_URL,
-    apiKey: env.ANTHROPIC_API_KEY,
-    mapModel: (m) => m,
-    isDeepseek: false,
-  };
-}
 
 export interface MessagesResponse {
   id: string;
@@ -105,8 +70,13 @@ export interface CallClaudeOptions {
  */
 export async function callClaude(
   env: AnthropicEnv,
-  { model, maxTokens, messages, system, thinking }: CallClaudeOptions,
+  options: CallClaudeOptions,
 ): Promise<MessagesResponse> {
+  if (env.LLM_PROVIDER === "gemini") {
+    return callGemini(env, options);
+  }
+
+  const { model, maxTokens, messages, system, thinking } = options;
   const body: {
     model: string;
     max_tokens: number;
@@ -117,13 +87,10 @@ export async function callClaude(
   if (system !== undefined) body.system = system;
   if (thinking !== undefined) body.thinking = thinking;
 
-  const provider = providerFor(env);
-  body.model = provider.mapModel(model);
-
-  const res = await fetch(provider.url, {
+  const res = await fetch(API_URL, {
     method: "POST",
     headers: {
-      "x-api-key": provider.apiKey,
+      "x-api-key": env.ANTHROPIC_API_KEY,
       "anthropic-version": API_VERSION,
       "content-type": "application/json",
     },
@@ -159,14 +126,10 @@ export async function researchWithWebSearch(
   env: AnthropicEnv,
   params: { prompt: string; system: string; maxUses?: number },
 ): Promise<WebResearchResult> {
-  // DeepSeek's compat layer accepts a web_search tool request but silently
-  // ignores it and answers from training data — that's ungrounded text
-  // masquerading as research. Route research to Gemini's Google Search
-  // grounding instead; without a Gemini key, refuse loudly so the brief's
-  // enrichment layer treats it as a normal best-effort failure ("no web data").
-  if (providerFor(env).isDeepseek) {
-    if (env.GEMINI_API_KEY) return researchWithGeminiSearch(env, params);
-    throw new Error("web_search_unsupported: LLM_PROVIDER=deepseek ignores the web_search tool");
+  // Under the Gemini provider, research runs on Google Search grounding —
+  // the web_search server tool below is Anthropic-only.
+  if (env.LLM_PROVIDER === "gemini") {
+    return researchWithGeminiSearch(env, params);
   }
   type Block = { type: string; text?: string; citations?: Array<Record<string, unknown>> };
   const messages: Array<{ role: "user" | "assistant"; content: string | Block[] }> = [
@@ -246,10 +209,11 @@ export async function composeBrief(input: {
 }, env: AnthropicEnv): Promise<string> {
   const res = await callClaude(env, {
     model: MODEL_BRIEF,
-    // 8192, not 2048: deepseek-v4-pro always emits thinking blocks (even when
-    // not requested) INSIDE max_tokens — 2048 got fully consumed by reasoning
-    // and produced a zero-length brief. A cap is not a spend target, so this
-    // is free on providers that don't think.
+    // 8192, not 2048: thinking-by-default models (Gemini 2.5, and the brief
+    // DeepSeek era before it) spend reasoning tokens INSIDE the output cap —
+    // 2048 once got fully consumed by reasoning and produced a zero-length
+    // brief. A cap is not a spend target, so this is free on models that
+    // don't think.
     maxTokens: 8192,
     system: PRE_CALL_BRIEF_SYSTEM,
     messages: [

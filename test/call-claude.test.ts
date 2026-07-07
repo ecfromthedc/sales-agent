@@ -144,49 +144,91 @@ describe("callClaude", () => {
   });
 });
 
-// 2026-07-06: LLM_PROVIDER="deepseek" routes every call to DeepSeek's
-// Anthropic-compatible endpoint (Anthropic account billing outage). These lock
-// the switch: URL, key selection, model mapping, thinking passthrough, and the
-// hard refusal of web research (DeepSeek silently ignores the web_search tool,
-// which would put ungrounded prose in client-facing briefs).
-describe("callClaude — LLM_PROVIDER=deepseek", () => {
-  const dsEnv = {
+// 2026-07-06: LLM_PROVIDER="gemini" routes composition through the adapter in
+// lib/gemini.ts and web research through Google Search grounding (Anthropic
+// account billing outage; a brief DeepSeek path was removed same-day). These
+// lock the switch: URL + key selection, tier mapping (brief→flash,
+// opus→pro), request/response translation, and research grounding.
+describe("callClaude — LLM_PROVIDER=gemini", () => {
+  const gEnv = {
     ANTHROPIC_API_KEY: "sk-ant-unused",
-    DEEPSEEK_API_KEY: "sk-ds-test",
-    LLM_PROVIDER: "deepseek",
+    GEMINI_API_KEY: "AIza-test",
+    LLM_PROVIDER: "gemini",
   } as unknown as Env;
 
-  it("routes to the DeepSeek compat endpoint with the DeepSeek key and mapped model", async () => {
-    const spy = mockFetch(() => jsonResponse(OK_BODY));
+  const GEMINI_OK = {
+    responseId: "resp-1",
+    candidates: [
+      {
+        content: { parts: [{ text: "hello from gemini" }] },
+        finishReason: "STOP",
+      },
+    ],
+    usageMetadata: { promptTokenCount: 12, candidatesTokenCount: 7 },
+  };
 
-    await callClaude(dsEnv, {
+  it("translates the request and maps opus-tier work to gemini-2.5-pro", async () => {
+    const spy = mockFetch(() => jsonResponse(GEMINI_OK));
+
+    const res = await callClaude(gEnv, {
       model: "claude-opus-4-8",
-      maxTokens: 8192,
-      thinking: { type: "adaptive" },
-      messages: [{ role: "user", content: "hi" }],
+      maxTokens: 16000,
+      system: "you are a test",
+      thinking: { type: "adaptive" }, // dropped — Gemini manages its own reasoning
+      messages: [
+        { role: "user", content: "first" },
+        { role: "assistant", content: "second" },
+      ],
     });
 
     const [url, init] = spy.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://api.deepseek.com/anthropic/v1/messages");
-    const headers = init.headers as Record<string, string>;
-    expect(headers["x-api-key"]).toBe("sk-ds-test");
+    expect(url).toContain("generativelanguage.googleapis.com");
+    expect(url).toContain("gemini-2.5-pro:generateContent");
+    expect((init.headers as Record<string, string>)["x-goog-api-key"]).toBe("AIza-test");
     const body = JSON.parse(init.body as string);
-    // Every Claude model maps to the one DeepSeek model; thinking passes through
-    // (v4-pro supports it natively).
-    expect(body.model).toBe("deepseek-v4-pro");
-    expect(body.thinking).toEqual({ type: "adaptive" });
+    expect(body.systemInstruction.parts[0].text).toBe("you are a test");
+    expect(body.generationConfig.maxOutputTokens).toBe(16000);
+    // Anthropic roles map to Gemini roles; assistant → model.
+    expect(body.contents).toEqual([
+      { role: "user", parts: [{ text: "first" }] },
+      { role: "model", parts: [{ text: "second" }] },
+    ]);
+    expect("thinking" in body).toBe(false);
+
+    // Response is mapped back to the MessagesResponse shape.
+    expect(res.content[0]).toEqual({ type: "text", text: "hello from gemini" });
+    expect(res.stop_reason).toBe("end_turn");
+    expect(res.usage).toEqual({ input_tokens: 12, output_tokens: 7 });
   });
 
-  it("throws when LLM_PROVIDER=deepseek but DEEPSEEK_API_KEY is unset", async () => {
-    const spy = mockFetch(() => jsonResponse(OK_BODY));
+  it("maps brief-tier work to gemini-2.5-flash and MAX_TOKENS to max_tokens", async () => {
+    const spy = mockFetch(() =>
+      jsonResponse({
+        candidates: [{ content: { parts: [{ text: "" }] }, finishReason: "MAX_TOKENS" }],
+      }),
+    );
+
+    const res = await callClaude(gEnv, {
+      model: "claude-sonnet-4-6",
+      maxTokens: 8192,
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    const [url] = spy.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("gemini-2.5-flash:generateContent");
+    expect(res.stop_reason).toBe("max_tokens");
+  });
+
+  it("throws when LLM_PROVIDER=gemini but GEMINI_API_KEY is unset, no network", async () => {
+    const spy = mockFetch(() => jsonResponse(GEMINI_OK));
 
     await expect(
-      callClaude({ ANTHROPIC_API_KEY: "sk", LLM_PROVIDER: "deepseek" } as unknown as Env, {
+      callClaude({ ANTHROPIC_API_KEY: "sk", LLM_PROVIDER: "gemini" } as unknown as Env, {
         model: "claude-sonnet-4-6",
         maxTokens: 100,
         messages: [{ role: "user", content: "hi" }],
       }),
-    ).rejects.toThrow(/llm_provider_deepseek_missing_key/);
+    ).rejects.toThrow(/llm_provider_gemini_missing_key/);
     expect(spy).not.toHaveBeenCalled();
   });
 
@@ -204,17 +246,7 @@ describe("callClaude — LLM_PROVIDER=deepseek", () => {
     expect((init.headers as Record<string, string>)["x-api-key"]).toBe("sk-test-key");
   });
 
-  it("researchWithWebSearch refuses under deepseek WITHOUT a Gemini key, no network", async () => {
-    const spy = mockFetch(() => jsonResponse(OK_BODY));
-
-    await expect(
-      researchWithWebSearch(dsEnv, { prompt: "who is X", system: "research" }),
-    ).rejects.toThrow(/web_search_unsupported/);
-    expect(spy).not.toHaveBeenCalled();
-  });
-
-  it("researchWithWebSearch routes to Gemini google_search grounding under deepseek + GEMINI_API_KEY", async () => {
-    const geminiEnv = { ...(dsEnv as object), GEMINI_API_KEY: "AIza-test" } as unknown as Env;
+  it("researchWithWebSearch routes to Gemini google_search grounding with deduped citations", async () => {
     const spy = mockFetch(() =>
       jsonResponse({
         candidates: [
@@ -232,16 +264,13 @@ describe("callClaude — LLM_PROVIDER=deepseek", () => {
       }),
     );
 
-    const result = await researchWithWebSearch(geminiEnv, {
+    const result = await researchWithWebSearch(gEnv, {
       prompt: "who is X",
       system: "research system",
     });
 
     const [url, init] = spy.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain("generativelanguage.googleapis.com");
     expect(url).toContain("gemini-2.5-flash:generateContent");
-    const headers = init.headers as Record<string, string>;
-    expect(headers["x-goog-api-key"]).toBe("AIza-test");
     const body = JSON.parse(init.body as string);
     expect(body.tools).toEqual([{ google_search: {} }]);
     expect(body.systemInstruction.parts[0].text).toBe("research system");
@@ -254,24 +283,21 @@ describe("callClaude — LLM_PROVIDER=deepseek", () => {
   });
 
   it("Gemini research throws on non-2xx with a tagged error", async () => {
-    const geminiEnv = { ...(dsEnv as object), GEMINI_API_KEY: "AIza-test" } as unknown as Env;
     mockFetch(() => new Response("quota exceeded", { status: 429 }));
 
     await expect(
-      researchWithWebSearch(geminiEnv, { prompt: "x", system: "s" }),
+      researchWithWebSearch(gEnv, { prompt: "x", system: "s" }),
     ).rejects.toThrow(/gemini_429: quota exceeded/);
   });
 
-  it("composeBrief throws on a thinking-only response instead of returning an empty brief", async () => {
-    // Regression: v4-pro burned the whole 2048 max_tokens on thinking, the run
-    // "succeeded" with briefLen 0, upserted a blank deal, and Slack rejected
-    // the empty section block (invalid_blocks). Empty compose = hard failure.
+  it("composeBrief throws when the model returns no text instead of shipping an empty brief", async () => {
+    // Regression: a thinking-by-default model burned the whole output cap on
+    // reasoning, the run "succeeded" with briefLen 0, upserted a blank deal,
+    // and Slack rejected the empty section block (invalid_blocks). Empty
+    // compose = hard failure.
     mockFetch(() =>
       jsonResponse({
-        id: "msg_t",
-        content: [{ type: "thinking" }],
-        stop_reason: "max_tokens",
-        usage: { input_tokens: 10, output_tokens: 2048 },
+        candidates: [{ content: { parts: [{ text: "" }] }, finishReason: "MAX_TOKENS" }],
       }),
     );
 
@@ -286,7 +312,7 @@ describe("callClaude — LLM_PROVIDER=deepseek", () => {
           },
           enrichment: {},
         },
-        dsEnv,
+        gEnv,
       ),
     ).rejects.toThrow(/compose_brief_empty/);
   });
