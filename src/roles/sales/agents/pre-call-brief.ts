@@ -14,7 +14,6 @@
 
 import type { Env } from "../../../lib/env";
 import { enrichFromSpotify } from "../../../integrations/spotify";
-import { enrichFromSongstats } from "../../../integrations/songstats";
 import { enrichFromChartmetric } from "../../../integrations/chartmetric";
 import { searchGmailHistory } from "../../../integrations/gmail";
 import { researchProspect } from "../../../integrations/web-research";
@@ -71,22 +70,19 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       null;
     console.log("pre_call_brief_step", { step: "extract_spotify", hasLink: !!spotifyLink });
 
-    // Extract Spotify artist ID for Songstats lookup
+    // Extract Spotify artist ID for the Chartmetric lookup
     const spotifyArtistId = spotifyLink
       ? spotifyLink.match(/artist\/([a-zA-Z0-9]{22})/)?.[1] ?? null
       : null;
 
-    // Phase 1: Songstats + Spotify + Chartmetric + Gmail + web research in
-    // parallel (Songstats is sequential internally). Each call is retried
-    // independently with exponential backoff; allSettled keeps partial failures
-    // from blocking the others. Web research always runs so there's a picture
-    // even when no Spotify link / no streaming data is available.
-    const [spotify, songstats, chartmetric, gmail, web] = await Promise.allSettled([
+    // Phase 1: Spotify + Chartmetric + Gmail + web research in parallel.
+    // Each call is retried independently with exponential backoff; allSettled
+    // keeps partial failures from blocking the others. Web research always
+    // runs so there's a picture even when no Spotify link / no streaming data
+    // is available.
+    const [spotify, chartmetric, gmail, web] = await Promise.allSettled([
       spotifyLink
         ? retry(() => enrichFromSpotify(spotifyLink, env), ENRICH_RETRY)
-        : Promise.resolve(null),
-      spotifyArtistId
-        ? retry(() => enrichFromSongstats(spotifyArtistId, env), ENRICH_RETRY)
         : Promise.resolve(null),
       retry(
         () => enrichFromChartmetric({ spotifyArtistId, artistName: input.inviteeName }, env),
@@ -103,10 +99,11 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       ),
     ]);
 
-    // Phase 2: CRM lookup — uses artist name from Songstats if available, falls back to invitee name
-    const songstatsData = songstats.status === "fulfilled" ? songstats.value : null;
-    const artistName = songstatsData?.name ?? input.inviteeName;
-    const relatedArtists = songstatsData?.relatedArtists?.map((a) => a.name);
+    // Phase 2: CRM lookup — uses the Chartmetric artist name when available,
+    // falls back to the invitee name.
+    const chartmetricData = chartmetric.status === "fulfilled" ? chartmetric.value : null;
+    const artistName = chartmetricData?.name ?? input.inviteeName;
+    const relatedArtists = chartmetricData?.relatedArtists;
 
     // Extract label from Songstats platform links or notes
     const labelHint = input.questionsAndAnswers
@@ -123,13 +120,11 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
     console.log("pre_call_brief_step", {
       step: "enrichment_done",
       spotify: spotify.status,
-      songstats: songstats.status,
       chartmetric: chartmetric.status,
       gmail: gmail.status,
       web: web.status,
       crmMatches: crmLookup.totalCampaignsFound,
       spotifyErr: spotify.status === "rejected" ? (spotify.reason as Error)?.message : undefined,
-      songstatsErr: songstats.status === "rejected" ? (songstats.reason as Error)?.message : undefined,
       chartmetricErr: chartmetric.status === "rejected" ? (chartmetric.reason as Error)?.message : undefined,
       gmailErr: gmail.status === "rejected" ? (gmail.reason as Error)?.message : undefined,
       webErr: web.status === "rejected" ? (web.reason as Error)?.message : undefined,
@@ -141,11 +136,16 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
     // network path. Candidates are same-lane by construction (artist/label/
     // related-artist matched); we rank them by genre/tier/recency.
     const spotifyData = spotify.status === "fulfilled" ? spotify.value : null;
+    const chartmetricGenres = chartmetricData
+      ? [chartmetricData.genrePrimary, ...chartmetricData.genresSecondary].filter(
+          (g): g is string => !!g,
+        )
+      : [];
     const prospectSignal: ProspectSignal = {
-      genres: songstatsData?.genres ?? spotifyData?.genres ?? [],
+      genres: chartmetricGenres.length > 0 ? chartmetricGenres : spotifyData?.genres ?? [],
       audience:
-        songstatsData?.spotify.monthlyListeners ??
-        songstatsData?.spotify.followers ??
+        chartmetricData?.spotifyMonthlyListeners ??
+        chartmetricData?.spotifyFollowers ??
         spotifyData?.followers ??
         null,
     };
@@ -167,13 +167,12 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
 
     const enrichment = {
       spotify: spotifyData,
-      songstats: songstatsData,
-      chartmetric: chartmetric.status === "fulfilled" ? chartmetric.value : null,
+      chartmetric: chartmetricData,
       gmail: gmail.status === "fulfilled" ? gmail.value : null,
       web: web.status === "fulfilled" ? web.value : null,
       crm: crmLookup,
       comparables,
-      failures: [spotify, songstats, chartmetric, gmail, web]
+      failures: [spotify, chartmetric, gmail, web]
         .filter((r) => r.status === "rejected")
         .map((r) => (r as PromiseRejectedResult).reason?.message ?? "unknown"),
     };

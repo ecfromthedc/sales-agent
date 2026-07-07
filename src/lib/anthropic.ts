@@ -247,24 +247,24 @@ const PRE_CALL_BRIEF_SYSTEM = `You write pre-call briefs for Eric Cromartie, fou
 ## Brief structure:
 
 **ARTIST** — Name, label, genre, monthly listeners, popularity score. One line on where they sit in the market. Done.
-- For popularity, prefer enrichment.chartmetric.cmScore (0–100 cross-platform Chartmetric score) and cmRank (global rank) when present — "Chartmetric 82, ranked #1,400 globally" is the sharpest read on momentum. Fall back to enrichment.songstats Spotify popularity if Chartmetric is missing.
+- For popularity, prefer enrichment.chartmetric.cmScore (0–100 cross-platform Chartmetric score) and cmRank (global rank) when present — "Chartmetric 82, ranked #1,400 globally" is the sharpest read on momentum. Fall back to enrichment.chartmetric.spotifyPopularity (or enrichment.spotify) if the score is missing.
 
 **WHO THEY ARE** — Always include this, from enrichment.web (always-on web research on the booker, their act, and the company behind their email). 2-4 tight lines: who booked the call (artist, manager, or label/company rep), who/what they're connected to, and anything that shapes the pitch. This is the picture for cold prospects where Spotify/Chartmetric are empty — lean on it. If enrichment.web is null or says nothing was found, write "Couldn't confirm much online" and move on. Never invent — only use what enrichment.web states.
 
-**NUMBERS** — Stat block, not prose:
+**NUMBERS** — Stat block, not prose (all from enrichment.chartmetric). Skip any stat that is null/absent — NEVER write 0 or "N/A" for missing data, just omit the line:
 - Chartmetric score (0–100) + global rank, if present
-- Listeners / Popularity / Followers / Streams
-- Playlists (current + editorial)
-- Social: IG, TikTok, YouTube
+- Listeners (spotifyMonthlyListeners) / Popularity (spotifyPopularity) / Followers (spotifyFollowers)
+- Playlists: totalPlaylists + editorialPlaylists + playlistReach
+- Social: instagramFollowers, tiktokFollowers, youtubeSubscribers
 - Top songs: from enrichment.chartmetric.topTracks (up to 5) — name | Spotify popularity. List highest-popularity first. Popularity 70+ = hot, push as a TikTok sound. High streams + low popularity = catalog re-activation play.
 - Latest releases: from enrichment.chartmetric.latestTracks (up to 3) — name | release date | Spotify popularity. This is the momentum read: are their newest drops landing (high popularity) or under-performing (a gap we can fix)? Call out the contrast vs. their top songs if it's stark.
 
-**LINKS** — clickable profile URLs for quick assessment. Pull from enrichment.songstats.platformLinks and the Spotify link from the Calendly Q&A. Format as a compact list:
+**LINKS** — clickable profile URLs for quick assessment. Pull from enrichment.chartmetric.links (domain + url pairs) and the Spotify link from the Calendly Q&A. Format as a compact list:
 - Spotify: [url]
 - Instagram: [url]
 - TikTok: [url]
 - YouTube: [url]
-- (any other platforms in platformLinks)
+- (any other domains in enrichment.chartmetric.links)
 Only include platforms where a URL exists in the enrichment data. Skip platforms with no URL — don't guess or construct URLs.
 
 **RT HISTORY** — Check enrichment.crm first (exactMatches = this artist, labelMatches = same label or related artists). For each hit: artist, song, stage, spend, label. Then check enrichment.gmail for email threads. If CRM has matches, lead with them — "RT ran X campaign for $Y" is the strongest thing Eric can say on the call. Only say "Cold" if both are empty.
