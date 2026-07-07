@@ -10,3 +10,7 @@ dist/
 .rotation-log
 .dev.dev.vars.bak
 *.bak
+
+# stitchpad runtime
+.stitchpad/.state/
+.stitchpad/stitchpad-git/
