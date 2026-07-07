@@ -24,6 +24,8 @@ export interface CalendlySource {
   eventTypeUris: string[];
   /** Target Slack channel for this host's pre-call briefs (falsy ⇒ no Slack post). */
   briefChannelId: (env: Env) => string | undefined;
+  /** Slack user id of the host — @-mentioned in the T-30 pre-call reminder. */
+  hostSlackUserId?: string;
 }
 
 export const CALENDLY_SOURCES: CalendlySource[] = [
@@ -32,6 +34,7 @@ export const CALENDLY_SOURCES: CalendlySource[] = [
     userUri: "https://api.calendly.com/users/068c5c2e-6a61-4c2c-bfe7-4cd4b3358eaa",
     eventTypeUris: [], // default host; webhooks that match nothing else fall here
     briefChannelId: (env) => env.SLACK_BRIEF_CHANNEL_ID,
+    hostSlackUserId: "U0727GZMTK5", // ecrom423
   },
   {
     label: "seeno",
@@ -41,6 +44,7 @@ export const CALENDLY_SOURCES: CalendlySource[] = [
     // Splits to its own channel if SLACK_BRIEF_CHANNEL_ID_SEENO is set; otherwise
     // shares the default brief channel (currently the same channel either way).
     briefChannelId: (env) => env.SLACK_BRIEF_CHANNEL_ID_SEENO ?? env.SLACK_BRIEF_CHANNEL_ID,
+    hostSlackUserId: "U0AE7U5EBB8", // seeno
   },
 ];
 

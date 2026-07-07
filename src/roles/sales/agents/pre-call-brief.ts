@@ -24,7 +24,8 @@ import { rankComparables, type ProspectSignal } from "../../../lib/comparables";
 import { composeBrief } from "../../../lib/anthropic";
 import { recordRun, recordError } from "../../../lib/run-state";
 import { retry } from "../../../lib/retry";
-import { notifySlack, buildBriefMessage } from "../../../integrations/slack";
+import { notifySlack, buildBriefMessage, postBriefToCanvas } from "../../../integrations/slack";
+import { REMINDER_PREFIX, type ReminderRecord } from "../triggers/reminder-poll";
 
 // Enrichment sources are external and fail transiently (network blips, 429/5xx).
 // Each call is wrapped in `retry` (exponential backoff + jitter) so a transient
@@ -41,6 +42,8 @@ interface PreCallBriefInput {
   dealId?: string; // present on manual rerun
   /** Slack channel for the brief ping. Defaults to env.SLACK_BRIEF_CHANNEL_ID. */
   slackChannelId?: string;
+  /** Slack user id of the booked host (Eric/Seeno) — @-mentioned at T-30. */
+  hostSlackUserId?: string;
 }
 
 // Matches a Spotify URL anywhere in free-text. Lets us pull the artist link even
@@ -196,9 +199,10 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
 
     // Post full brief to Slack (best-effort; notifySlack no-ops on missing
     // token/channel and never throws into the run path).
+    const channelId = input.slackChannelId ?? env.SLACK_BRIEF_CHANNEL_ID;
     await notifySlack(
       env,
-      input.slackChannelId ?? env.SLACK_BRIEF_CHANNEL_ID,
+      channelId,
       buildBriefMessage({
         inviteeName: input.inviteeName,
         inviteeEmail: input.inviteeEmail,
@@ -207,6 +211,35 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
         pageId,
       }),
     );
+
+    // Archive the brief in the channel canvas (durable, newest on top).
+    // Best-effort, same contract as notifySlack.
+    await postBriefToCanvas(
+      env,
+      channelId,
+      `# 📋 ${input.inviteeName} — ${meetingTime}\n\n${brief}\n\n---\n`,
+    );
+
+    // Schedule the T-30 refresher card (fresh popularity scores + host
+    // mention). Consumed by reminder-poll on the 5-min cron. Best-effort —
+    // a KV blip must not fail a brief that already shipped.
+    const reminder: ReminderRecord = {
+      startsAt: input.eventStartsAt,
+      channelId,
+      hostSlackUserId: input.hostSlackUserId,
+      inviteeName: input.inviteeName,
+      inviteeEmail: input.inviteeEmail,
+      artistName,
+      spotifyArtistId,
+      pageId,
+    };
+    const untilStartS = Math.floor((Date.parse(input.eventStartsAt) - Date.now()) / 1000);
+    if (untilStartS > 0) {
+      await env.STATE.put(`${REMINDER_PREFIX}${input.eventUri}`, JSON.stringify(reminder), {
+        // Self-expire an hour past the meeting in case the sweep never runs.
+        expirationTtl: Math.max(untilStartS + 3600, 60),
+      }).catch((e) => console.warn("reminder_schedule_failed", (e as Error).message));
+    }
 
     console.log("pre_call_brief_complete", {
       invitee: input.inviteeEmail,

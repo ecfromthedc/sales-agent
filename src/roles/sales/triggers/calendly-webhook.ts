@@ -51,6 +51,7 @@ export async function handleCalendlyWebhook(
       eventUri: payload.payload.scheduled_event.uri,
       questionsAndAnswers: payload.payload.questions_and_answers ?? [],
       slackChannelId: source.briefChannelId(env),
+      hostSlackUserId: source.hostSlackUserId,
     }, env),
   );
 

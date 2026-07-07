@@ -57,9 +57,10 @@ export async function handleTestPreCall(
     await runPreCallBrief({
       inviteeEmail: body.email,
       inviteeName: body.name,
-      eventStartsAt: startTime,
+      eventStartsAt: body.startsAt ?? startTime,
       eventUri,
       questionsAndAnswers: qa,
+      hostSlackUserId: body.hostSlackUserId,
     }, env);
 
     return json({
@@ -81,6 +82,10 @@ interface TestInput {
   name?: string;
   spotifyLink?: string;
   notes?: string;
+  /** Override the synthetic meeting start (default: now + 1h). */
+  startsAt?: string;
+  /** Host Slack user id to @-mention in the T-30 reminder. */
+  hostSlackUserId?: string;
 }
 
 function json(body: unknown, status = 200): Response {

@@ -131,6 +131,7 @@ async function pollSource(
             eventUri: event.uri,
             questionsAndAnswers: invitee.questions_and_answers ?? [],
             slackChannelId: channelId,
+            hostSlackUserId: source.hostSlackUserId,
           },
           env,
         );

@@ -22,6 +22,7 @@ export type RunKind =
   | "cron" // the scheduled() tick as a whole
   | "calendly-poll"
   | "transcript-poll"
+  | "reminder-poll" // T-30 pre-call reminder cards
   | "email-digest" // daily inbox-triage digest (SALE-122; inert until channel set)
   | "brief" // pre-call brief agent
   | "pitch"; // post-call pitch agent
@@ -31,6 +32,7 @@ const ALL_KINDS: RunKind[] = [
   "cron",
   "calendly-poll",
   "transcript-poll",
+  "reminder-poll",
   "email-digest",
   "brief",
   "pitch",
@@ -106,6 +108,7 @@ export interface StatusPayload {
     lastRun: string | null;
     calendlyPoll: RunSummary;
     transcriptPoll: RunSummary;
+    reminderPoll: RunSummary;
     emailDigest: RunSummary;
   };
   agents: {
@@ -133,6 +136,7 @@ export function shapeStatus(
 
   const calendlyPoll = summary("calendly-poll");
   const transcriptPoll = summary("transcript-poll");
+  const reminderPoll = summary("reminder-poll");
   const emailDigest = summary("email-digest");
   const brief = summary("brief");
   const pitch = summary("pitch");
@@ -141,6 +145,7 @@ export function shapeStatus(
     parseCount(raw.errors.cron) +
     calendlyPoll.errors +
     transcriptPoll.errors +
+    reminderPoll.errors +
     emailDigest.errors +
     brief.errors +
     pitch.errors;
@@ -153,6 +158,7 @@ export function shapeStatus(
       lastRun: normalizeTs(raw.last.cron),
       calendlyPoll,
       transcriptPoll,
+      reminderPoll,
       emailDigest,
     },
     agents: { brief, pitch },

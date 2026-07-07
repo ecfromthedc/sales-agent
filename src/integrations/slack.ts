@@ -109,13 +109,128 @@ export async function notifySlack(
 }
 
 // ---------------------------------------------------------------------------
+// Channel canvas — every brief is also archived in the channel's canvas so
+// there's a durable, scrollable record in the Canvas tab (newest on top),
+// not just messages that fall out of history.
+// ---------------------------------------------------------------------------
+
+const CANVAS_KV_PREFIX = "slack-canvas:";
+
+/** Minimal KV shape needed for canvas-id caching (satisfied by Env["STATE"]). */
+interface CanvasEnv {
+  SLACK_BOT_TOKEN?: string;
+  STATE: { get(k: string): Promise<string | null>; put(k: string, v: string): Promise<void> };
+}
+
+async function slackApi(
+  fetchImpl: FetchLike,
+  token: string,
+  method: string,
+  args: Record<string, unknown>,
+): Promise<{ ok?: boolean; error?: string } & Record<string, unknown>> {
+  const res = await fetchImpl(`https://slack.com/api/${method}`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(args),
+  });
+  return ((await res.json().catch(() => null)) ?? { ok: false, error: `http_${res.status}` }) as {
+    ok?: boolean;
+    error?: string;
+  } & Record<string, unknown>;
+}
+
+/**
+ * Prepend a markdown section to the channel's canvas, creating the channel
+ * canvas on first use. The canvas id is cached in KV (`slack-canvas:<channel>`)
+ * and recovered from `conversations.info` if the canvas already exists.
+ * Guarded + non-throwing, same contract as notifySlack — an archive miss must
+ * never fail a brief that already posted.
+ */
+export async function postBriefToCanvas(
+  env: CanvasEnv,
+  channel: string | undefined,
+  markdown: string,
+  fetchImpl: FetchLike = globalThis.fetch as unknown as FetchLike,
+): Promise<NotifyResult> {
+  const token = env.SLACK_BOT_TOKEN?.trim();
+  const channelId = channel?.trim();
+  if (!token || !channelId || !markdown.trim()) {
+    return { ok: false, skipped: true };
+  }
+
+  try {
+    const kvKey = `${CANVAS_KV_PREFIX}${channelId}`;
+    let canvasId = await env.STATE.get(kvKey);
+
+    if (!canvasId) {
+      // Slack allows exactly one canvas per channel: create it seeded with
+      // this brief, or recover the id of the one that already exists.
+      const created = await slackApi(fetchImpl, token, "conversations.canvases.create", {
+        channel_id: channelId,
+        document_content: { type: "markdown", markdown },
+      });
+      if (created.ok && typeof created.canvas_id === "string") {
+        await env.STATE.put(kvKey, created.canvas_id);
+        return { ok: true, skipped: false };
+      }
+      if (created.error === "channel_canvas_already_exists") {
+        const info = await slackApi(fetchImpl, token, "conversations.info", {
+          channel: channelId,
+        });
+        // Depending on workspace, the channel canvas surfaces as
+        // properties.canvas or as a canvas tab in properties.tabs.
+        const props = (info as {
+          channel?: {
+            properties?: {
+              canvas?: { file_id?: string };
+              tabs?: Array<{ type?: string; data?: { file_id?: string } }>;
+            };
+          };
+        }).channel?.properties;
+        const fileId =
+          props?.canvas?.file_id ??
+          props?.tabs?.find((t) => t.type === "canvas")?.data?.file_id;
+        if (fileId) {
+          canvasId = fileId;
+          await env.STATE.put(kvKey, fileId);
+        }
+      }
+      if (!canvasId) {
+        const error = created.error ?? "canvas_create_failed";
+        console.warn("slack_canvas_failed", { channel: channelId, error });
+        return { ok: false, skipped: false, error };
+      }
+    }
+
+    const edited = await slackApi(fetchImpl, token, "canvases.edit", {
+      canvas_id: canvasId,
+      changes: [
+        { operation: "insert_at_start", document_content: { type: "markdown", markdown } },
+      ],
+    });
+    if (!edited.ok) {
+      console.warn("slack_canvas_failed", { channel: channelId, error: edited.error });
+      return { ok: false, skipped: false, error: edited.error };
+    }
+    return { ok: true, skipped: false };
+  } catch (err) {
+    const error = (err as Error).message;
+    console.warn("slack_canvas_failed", { channel: channelId, error });
+    return { ok: false, skipped: false, error };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Pure message builders — no env, no network, trivially unit-testable.
 // ---------------------------------------------------------------------------
 
 const SLACK_SECTION_LIMIT = 2900; // Slack section text block hard limit (3000).
 
 /** Build a Notion page URL from a (possibly hyphenated) page id. */
-function notionUrl(pageId: string): string {
+export function notionUrl(pageId: string): string {
   return `https://www.notion.so/${pageId.replace(/-/g, "")}`;
 }
 

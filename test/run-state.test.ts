@@ -31,6 +31,7 @@ describe("shapeStatus", () => {
         lastRun: null,
         calendlyPoll: { lastRun: null, errors: 0 },
         transcriptPoll: { lastRun: null, errors: 0 },
+        reminderPoll: { lastRun: null, errors: 0 },
         emailDigest: { lastRun: null, errors: 0 },
       },
       agents: {

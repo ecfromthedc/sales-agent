@@ -23,6 +23,7 @@ import { handleTranscriptWebhook } from "./roles/sales/triggers/transcript-webho
 import { handleManualRerun } from "./roles/sales/triggers/manual";
 import { pollTranscripts } from "./roles/sales/triggers/transcript-poll";
 import { pollCalendly } from "./roles/sales/triggers/calendly-poll";
+import { sendPreCallReminders } from "./roles/sales/triggers/reminder-poll";
 import { handleTestPreCall } from "./roles/sales/triggers/test";
 import { handleSmokeTest } from "./roles/sales/triggers/smoke";
 import { readRunState, shapeStatus, recordRun, recordError } from "./lib/run-state";
@@ -168,6 +169,16 @@ export default {
               async (err) => {
                 console.error("transcript_poll_failed", { message: (err as Error).message });
                 await recordError(env, "transcript-poll");
+              },
+            ),
+            sendPreCallReminders(env).then(
+              async (r) => {
+                console.log("reminder_poll_complete", r);
+                await recordRun(env, "reminder-poll");
+              },
+              async (err) => {
+                console.error("reminder_poll_failed", { message: (err as Error).message });
+                await recordError(env, "reminder-poll");
               },
             ),
           );
