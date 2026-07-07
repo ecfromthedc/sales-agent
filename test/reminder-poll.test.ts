@@ -13,11 +13,6 @@ vi.mock("../src/integrations/chartmetric", () => ({
   enrichFromChartmetric: (q: unknown, env: Env) => enrichFromChartmetric(q, env),
 }));
 
-const enrichFromSongstats = vi.fn(async (..._args: unknown[]) => null);
-vi.mock("../src/integrations/songstats", () => ({
-  enrichFromSongstats: (...args: unknown[]) => enrichFromSongstats(...args),
-}));
-
 const notifySlack = vi.fn(async (..._args: unknown[]) => ({ ok: true, skipped: false }));
 vi.mock("../src/integrations/slack", async () => {
   const actual = await vi.importActual<typeof import("../src/integrations/slack")>(
@@ -91,7 +86,6 @@ let env: Env;
 
 beforeEach(() => {
   enrichFromChartmetric.mockReset().mockResolvedValue(CM);
-  enrichFromSongstats.mockReset().mockResolvedValue(null);
   notifySlack.mockReset().mockResolvedValue({ ok: true, skipped: false });
   state = makeState();
   env = { STATE: state, SLACK_BRIEF_CHANNEL_ID: "C0B47J6FZ47" } as unknown as Env;
@@ -180,28 +174,5 @@ describe("buildReminderMessage", () => {
     const msg = buildReminderMessage(rec, null);
     expect(JSON.stringify(msg.blocks)).toContain("No fresh streaming scores");
     expect(msg.text).toContain("call in 30 min");
-  });
-
-  it("falls back to Songstats top tracks when Chartmetric is unavailable", () => {
-    const ss = {
-      name: "Artist",
-      genres: [],
-      spotify: { popularity: 27 },
-      topTracks: [
-        { name: "SS One", popularity: 39 },
-        { name: "SS Two", popularity: 19 },
-        { name: "SS Three", popularity: 16 },
-        { name: "SS Four", popularity: 12 },
-      ],
-    } as unknown as import("../src/integrations/songstats").SongstatsEnrichment;
-
-    const msg = buildReminderMessage(rec, null, ss);
-    const body = JSON.stringify(msg.blocks);
-
-    expect(body).toContain("SS One");
-    expect(body).toContain("*39*");
-    expect(body).not.toContain("SS Four"); // top THREE only
-    expect(body).not.toContain("Last 3 releases"); // Chartmetric-only section
-    expect(body).toContain("Spotify artist popularity *27*");
   });
 });

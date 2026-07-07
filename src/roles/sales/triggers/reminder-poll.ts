@@ -16,10 +16,6 @@ import {
   enrichFromChartmetric,
   type ChartmetricEnrichment,
 } from "../../../integrations/chartmetric";
-import {
-  enrichFromSongstats,
-  type SongstatsEnrichment,
-} from "../../../integrations/songstats";
 import { notifySlack, notionUrl, type SlackMessage } from "../../../integrations/slack";
 
 export const REMINDER_PREFIX = "reminder:";
@@ -78,22 +74,10 @@ export async function sendPreCallReminders(
       return null;
     });
 
-    // Songstats fallback: Chartmetric prod access is down as of 2026-07-06
-    // (refresh token revoked — "does not exist"; needs regeneration in the
-    // Chartmetric dashboard). Songstats top tracks carry popularity too, so
-    // the card degrades to top-3-only instead of no scores at all.
-    const songstats =
-      chartmetric === null && rec.spotifyArtistId
-        ? await enrichFromSongstats(rec.spotifyArtistId, env).catch((err) => {
-            console.warn("reminder_songstats_failed", { message: (err as Error).message });
-            return null;
-          })
-        : null;
-
     const res = await notifySlack(
       env,
       rec.channelId ?? env.SLACK_BRIEF_CHANNEL_ID,
-      buildReminderMessage(rec, chartmetric, songstats),
+      buildReminderMessage(rec, chartmetric),
     );
     if (res.ok || res.skipped) {
       // Sent (or deliberately unconfigured) — either way this meeting is done.
@@ -111,7 +95,6 @@ export async function sendPreCallReminders(
 export function buildReminderMessage(
   rec: ReminderRecord,
   cm: ChartmetricEnrichment | null,
-  ss: SongstatsEnrichment | null = null,
 ): SlackMessage {
   const mention = rec.hostSlackUserId ? `<@${rec.hostSlackUserId}> ` : "";
   const time = new Date(rec.startsAt).toLocaleString("en-US", {
@@ -124,15 +107,10 @@ export function buildReminderMessage(
   const pop = (n: number | null) => (n == null ? "–" : String(n));
   const lines: string[] = [];
 
-  // Chartmetric first; Songstats top tracks (by streams, with popularity)
-  // when Chartmetric is unavailable.
-  const top =
-    cm?.topTracks?.slice(0, 3).map((t) => ({ name: t.name, pop: t.spotifyPopularity })) ??
-    ss?.topTracks?.slice(0, 3).map((t) => ({ name: t.name, pop: t.popularity })) ??
-    [];
+  const top = cm?.topTracks?.slice(0, 3) ?? [];
   if (top.length > 0) {
     lines.push("*Top 3 songs (Spotify popularity)*");
-    for (const t of top) lines.push(`• ${t.name} — *${pop(t.pop)}*`);
+    for (const t of top) lines.push(`• ${t.name} — *${pop(t.spotifyPopularity)}*`);
   }
 
   const latest = cm?.latestTracks?.slice(0, 3) ?? [];
@@ -147,8 +125,6 @@ export function buildReminderMessage(
     lines.push(
       `Chartmetric score *${cm.cmScore}*${cm.cmRank != null ? ` · rank #${cm.cmRank}` : ""}`,
     );
-  } else if (ss?.spotify.popularity != null) {
-    lines.push(`Spotify artist popularity *${ss.spotify.popularity}*`);
   }
   if (lines.length === 0) {
     lines.push("_No fresh streaming scores available for this prospect._");
