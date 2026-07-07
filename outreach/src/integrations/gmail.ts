@@ -98,6 +98,17 @@ export async function archiveEmailsByQuery(env: Env, query: string, maxResults =
   return data.messages.length;
 }
 
+/** Fold a header value and drop CR/LF so callers can't inject extra headers. */
+function sanitizeHeader(value: string): string {
+  return value.replace(/[\r\n]+/g, ' ').trim();
+}
+
+/** base64url-encode a UTF-8 string (btoa alone throws on non-Latin-1 chars). */
+function base64UrlEncode(input: string): string {
+  const bytes = unescape(encodeURIComponent(input));
+  return btoa(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 /**
  * Create a draft email in Gmail (does NOT send — Eric reviews and sends manually).
  */
@@ -109,12 +120,9 @@ export async function createGmailDraft(
 ): Promise<string> {
   const token = await getGmailToken(env);
 
-  const rawMessage = btoa(
-    `To: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`,
-  )
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  const rawMessage = base64UrlEncode(
+    `To: ${sanitizeHeader(to)}\r\nSubject: ${sanitizeHeader(subject)}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`,
+  );
 
   const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
     method: 'POST',

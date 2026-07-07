@@ -1,5 +1,6 @@
 node_modules/
 .wrangler/
+logs/
 .dev.vars
 .env
 .env.local
@@ -9,3 +10,7 @@ dist/
 .rotation-log
 .dev.dev.vars.bak
 *.bak
+
+# stitchpad runtime
+.stitchpad/.state/
+.stitchpad/stitchpad-git/

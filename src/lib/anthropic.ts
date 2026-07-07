@@ -4,7 +4,16 @@
  *
  * Model strategy (per RT CLAUDE.md):
  *   - Sonnet 4.6 for the pre-call brief (fast, cheap, good enough)
- *   - Opus 4.5 with extended thinking for the post-call pitch (deep reasoning)
+ *   - Opus 4.8 with adaptive thinking for the post-call pitch/proposal
+ *     (budget_tokens is removed on Opus 4.7+ — adaptive is the only on-mode)
+ *
+ * Provider override (2026-07-06, Anthropic billing outage): setting
+ * `LLM_PROVIDER = "gemini"` routes every compose call through the adapter in
+ * lib/gemini.ts (brief-tier → gemini-2.5-flash, opus-tier → gemini-2.5-pro)
+ * and web research through Gemini's Google Search grounding. Unset ⇒ native
+ * Anthropic (requires a funded ANTHROPIC_API_KEY). A DeepSeek path existed
+ * for a few hours on 2026-07-06 and was removed same-day per Eric — Gemini
+ * covers both jobs on one key.
  */
 
 import {
@@ -12,6 +21,7 @@ import {
   orderSections,
   sectionsPromptBlock,
 } from "./pitch-sections";
+import { callGemini, researchWithGeminiSearch } from "./gemini";
 
 /**
  * Minimal structural env for {@link callClaude}. Narrowed from the concrete
@@ -21,13 +31,17 @@ import {
  */
 export interface AnthropicEnv {
   ANTHROPIC_API_KEY: string;
+  /** "gemini" ⇒ compose via lib/gemini.ts + Gemini-grounded research. Unset/other ⇒ Anthropic. */
+  LLM_PROVIDER?: string;
+  /** Required when LLM_PROVIDER is "gemini". */
+  GEMINI_API_KEY?: string;
 }
 
 const API_URL = "https://api.anthropic.com/v1/messages";
 const API_VERSION = "2023-06-01";
 
-const MODEL_BRIEF = "claude-sonnet-4-5-20250929";  // alias to current Sonnet 4.6
-const MODEL_PITCH = "claude-opus-4-5-20250929";    // alias to current Opus 4.5
+const MODEL_BRIEF = "claude-sonnet-4-6";
+const MODEL_PITCH = "claude-opus-4-8";
 
 export interface MessagesResponse {
   id: string;
@@ -46,7 +60,7 @@ export interface CallClaudeOptions {
   maxTokens: number;
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   system?: string;
-  thinking?: { type: "enabled"; budget_tokens: number };
+  thinking?: { type: "adaptive" };
 }
 
 /**
@@ -56,14 +70,19 @@ export interface CallClaudeOptions {
  */
 export async function callClaude(
   env: AnthropicEnv,
-  { model, maxTokens, messages, system, thinking }: CallClaudeOptions,
+  options: CallClaudeOptions,
 ): Promise<MessagesResponse> {
+  if (env.LLM_PROVIDER === "gemini") {
+    return callGemini(env, options);
+  }
+
+  const { model, maxTokens, messages, system, thinking } = options;
   const body: {
     model: string;
     max_tokens: number;
     messages: Array<{ role: "user" | "assistant"; content: string }>;
     system?: string;
-    thinking?: { type: "enabled"; budget_tokens: number };
+    thinking?: { type: "adaptive" };
   } = { model, max_tokens: maxTokens, messages };
   if (system !== undefined) body.system = system;
   if (thinking !== undefined) body.thinking = thinking;
@@ -81,6 +100,90 @@ export async function callClaude(
     throw new Error(`anthropic_${res.status}: ${(await res.text()).slice(0, 500)}`);
   }
   return res.json() as Promise<MessagesResponse>;
+}
+
+/** Result of a web-search-grounded research call. */
+export interface WebResearchResult {
+  /** Concatenated final answer text. */
+  text: string;
+  /** De-duplicated source citations surfaced during the search. */
+  citations: Array<{ title: string; url: string }>;
+}
+
+// Anthropic server-side web search tool (stable version — no code-execution
+// dependency, so it runs fine in a Worker). The server runs the search loop and
+// may return `pause_turn`; we re-request with the assistant turn appended until
+// it finishes (bounded so a misbehaving loop can't run forever).
+const WEB_SEARCH_TOOL_TYPE = "web_search_20250305";
+const WEB_SEARCH_MAX_TURNS = 5;
+
+/**
+ * Run a web-search-grounded research prompt and return the final text plus
+ * citations. Uses the brief model (fast/cheap). Best-effort: throws on a non-2xx
+ * HTTP response so the caller can swallow it — enrichment must never block a brief.
+ */
+export async function researchWithWebSearch(
+  env: AnthropicEnv,
+  params: { prompt: string; system: string; maxUses?: number },
+): Promise<WebResearchResult> {
+  // Under the Gemini provider, research runs on Google Search grounding —
+  // the web_search server tool below is Anthropic-only.
+  if (env.LLM_PROVIDER === "gemini") {
+    return researchWithGeminiSearch(env, params);
+  }
+  type Block = { type: string; text?: string; citations?: Array<Record<string, unknown>> };
+  const messages: Array<{ role: "user" | "assistant"; content: string | Block[] }> = [
+    { role: "user", content: params.prompt },
+  ];
+  const tools = [
+    { type: WEB_SEARCH_TOOL_TYPE, name: "web_search", max_uses: params.maxUses ?? 5 },
+  ];
+
+  let final: { content: Block[]; stop_reason: string } | null = null;
+  for (let turn = 0; turn < WEB_SEARCH_MAX_TURNS; turn++) {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "x-api-key": env.ANTHROPIC_API_KEY,
+        "anthropic-version": API_VERSION,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL_BRIEF,
+        max_tokens: 1500,
+        system: params.system,
+        tools,
+        messages,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`anthropic_web_search_${res.status}: ${(await res.text()).slice(0, 500)}`);
+    }
+    final = (await res.json()) as { content: Block[]; stop_reason: string };
+    // `pause_turn` means the server paused mid-search — resume by echoing the
+    // assistant turn back and re-requesting. Any other stop reason is terminal.
+    if (final.stop_reason !== "pause_turn") break;
+    messages.push({ role: "assistant", content: final.content });
+  }
+
+  const blocks = final?.content ?? [];
+  const text = blocks
+    .filter((b) => b.type === "text" && b.text)
+    .map((b) => b.text as string)
+    .join("")
+    .trim();
+
+  const citations = new Map<string, { title: string; url: string }>();
+  for (const b of blocks) {
+    for (const c of b.citations ?? []) {
+      const url = typeof c.url === "string" ? c.url : null;
+      if (url && !citations.has(url)) {
+        citations.set(url, { url, title: typeof c.title === "string" ? c.title : url });
+      }
+    }
+  }
+
+  return { text, citations: [...citations.values()] };
 }
 
 /**
@@ -106,7 +209,12 @@ export async function composeBrief(input: {
 }, env: AnthropicEnv): Promise<string> {
   const res = await callClaude(env, {
     model: MODEL_BRIEF,
-    maxTokens: 2048,
+    // 8192, not 2048: thinking-by-default models (Gemini 2.5, and the brief
+    // DeepSeek era before it) spend reasoning tokens INSIDE the output cap —
+    // 2048 once got fully consumed by reasoning and produced a zero-length
+    // brief. A cap is not a spend target, so this is free on models that
+    // don't think.
+    maxTokens: 8192,
     system: PRE_CALL_BRIEF_SYSTEM,
     messages: [
       {
@@ -115,7 +223,15 @@ export async function composeBrief(input: {
       },
     ],
   });
-  return extractText(res);
+  const brief = extractText(res).trim();
+  // An empty brief must FAIL the run (→ Slack alert + poll retry), never
+  // "succeed" into a blank Notion deal + invalid_blocks Slack post.
+  if (!brief) {
+    throw new Error(
+      `compose_brief_empty: no text block (stop_reason=${res.stop_reason}, output_tokens=${res.usage.output_tokens})`,
+    );
+  }
+  return brief;
 }
 
 const PRE_CALL_BRIEF_SYSTEM = `You write pre-call briefs for Eric Cromartie, founder of Rising Tides (music marketing agency). He reads these 30 seconds before a sales call.
@@ -131,21 +247,25 @@ const PRE_CALL_BRIEF_SYSTEM = `You write pre-call briefs for Eric Cromartie, fou
 ## Brief structure:
 
 **ARTIST** — Name, label, genre, monthly listeners, popularity score. One line on where they sit in the market. Done.
-- For popularity, prefer enrichment.chartmetric.cmScore (0–100 cross-platform Chartmetric score) and cmRank (global rank) when present — "Chartmetric 82, ranked #1,400 globally" is the sharpest read on momentum. Fall back to enrichment.songstats Spotify popularity if Chartmetric is missing.
+- For popularity, prefer enrichment.chartmetric.cmScore (0–100 cross-platform Chartmetric score) and cmRank (global rank) when present — "Chartmetric 82, ranked #1,400 globally" is the sharpest read on momentum. Fall back to enrichment.chartmetric.spotifyPopularity (or enrichment.spotify) if the score is missing.
 
-**NUMBERS** — Stat block, not prose:
+**WHO THEY ARE** — Always include this, from enrichment.web (always-on web research on the booker, their act, and the company behind their email). 2-4 tight lines: who booked the call (artist, manager, or label/company rep), who/what they're connected to, and anything that shapes the pitch. This is the picture for cold prospects where Spotify/Chartmetric are empty — lean on it. If enrichment.web is null or says nothing was found, write "Couldn't confirm much online" and move on. Never invent — only use what enrichment.web states.
+
+**NUMBERS** — Stat block, not prose. enrichment.chartmetric is AUTHORITATIVE — when both sources carry a stat, use Chartmetric's value. enrichment.songstats is a gap-filler ONLY: use it for stats Chartmetric lacks entirely (total catalog streams) or where the Chartmetric field is null for this artist (e.g. a missing TikTok count). Skip any stat that is null in BOTH — NEVER write 0 or "N/A" for missing data, just omit the line:
 - Chartmetric score (0–100) + global rank, if present
-- Listeners / Popularity / Followers / Streams
-- Playlists (current + editorial)
-- Social: IG, TikTok, YouTube
-- Top 3 tracks: name | popularity | streams. Popularity 70+ = hot, push as TikTok sound. High streams + low popularity = catalog re-activation play.
+- Listeners (spotifyMonthlyListeners) / Popularity (spotifyPopularity) / Followers (spotifyFollowers)
+- Total streams: enrichment.songstats.spotify.streamsTotal (Songstats is the only source for this)
+- Playlists: totalPlaylists + editorialPlaylists + playlistReach
+- Social: instagramFollowers, tiktokFollowers, youtubeSubscribers (fill a null from enrichment.songstats.social)
+- Top songs: from enrichment.chartmetric.topTracks (up to 5) — name | Spotify popularity. List highest-popularity first. Popularity 70+ = hot, push as a TikTok sound. High streams + low popularity = catalog re-activation play.
+- Latest releases: from enrichment.chartmetric.latestTracks (up to 3) — name | release date | Spotify popularity. This is the momentum read: are their newest drops landing (high popularity) or under-performing (a gap we can fix)? Call out the contrast vs. their top songs if it's stark.
 
-**LINKS** — clickable profile URLs for quick assessment. Pull from enrichment.songstats.platformLinks and the Spotify link from the Calendly Q&A. Format as a compact list:
+**LINKS** — clickable profile URLs for quick assessment. Pull from enrichment.chartmetric.links (domain + url pairs) and the Spotify link from the Calendly Q&A; fill any platform missing there from enrichment.songstats.platformLinks. Format as a compact list:
 - Spotify: [url]
 - Instagram: [url]
 - TikTok: [url]
 - YouTube: [url]
-- (any other platforms in platformLinks)
+- (any other platforms present in the enrichment link data)
 Only include platforms where a URL exists in the enrichment data. Skip platforms with no URL — don't guess or construct URLs.
 
 **RT HISTORY** — Check enrichment.crm first (exactMatches = this artist, labelMatches = same label or related artists). For each hit: artist, song, stage, spend, label. Then check enrichment.gmail for email threads. If CRM has matches, lead with them — "RT ran X campaign for $Y" is the strongest thing Eric can say on the call. Only say "Cold" if both are empty.
@@ -228,8 +348,9 @@ export async function composePitch(input: {
 }, env: AnthropicEnv): Promise<PitchOutput> {
   const res = await callClaude(env, {
     model: MODEL_PITCH,
-    maxTokens: 8192,
-    thinking: { type: "enabled", budget_tokens: 8000 },
+    // Adaptive thinking spends inside max_tokens — headroom for thinking + output.
+    maxTokens: 16000,
+    thinking: { type: "adaptive" },
     system: POST_CALL_PITCH_SYSTEM,
     messages: [
       {
@@ -275,8 +396,9 @@ export async function composeProposal(input: {
 
   const res = await callClaude(env, {
     model: MODEL_PITCH,
-    maxTokens: 12000,
-    thinking: { type: "enabled", budget_tokens: 8000 },
+    // Adaptive thinking spends inside max_tokens — headroom for thinking + output.
+    maxTokens: 16000,
+    thinking: { type: "adaptive" },
     system: PROPOSAL_SYSTEM,
     messages: [
       {

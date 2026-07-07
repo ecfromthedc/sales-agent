@@ -14,6 +14,7 @@ import type { Env } from "../src/lib/env";
 
 const pollCalendly = vi.fn<[Env], Promise<unknown>>();
 const pollTranscripts = vi.fn<[Env], Promise<unknown>>();
+const sendPreCallReminders = vi.fn<[Env], Promise<unknown>>();
 const postInboxDigest = vi.fn<[Env], Promise<unknown>>();
 
 vi.mock("../src/roles/sales/triggers/calendly-poll", () => ({
@@ -21,6 +22,9 @@ vi.mock("../src/roles/sales/triggers/calendly-poll", () => ({
 }));
 vi.mock("../src/roles/sales/triggers/transcript-poll", () => ({
   pollTranscripts: (env: Env) => pollTranscripts(env),
+}));
+vi.mock("../src/roles/sales/triggers/reminder-poll", () => ({
+  sendPreCallReminders: (env: Env) => sendPreCallReminders(env),
 }));
 vi.mock("../src/roles/email/digest", () => ({
   postInboxDigest: (env: Env) => postInboxDigest(env),
@@ -62,6 +66,7 @@ function makeCtx(): { ctx: ExecutionContext; settled: () => Promise<void> } {
 beforeEach(() => {
   pollCalendly.mockReset().mockResolvedValue({ ok: true });
   pollTranscripts.mockReset().mockResolvedValue({ ok: true });
+  sendPreCallReminders.mockReset().mockResolvedValue({ sent: 0, scanned: 0 });
   postInboxDigest.mockReset().mockResolvedValue({ posted: false });
   recordRun.mockClear();
   recordError.mockClear();
@@ -90,6 +95,7 @@ describe("scheduled() — cron dispatch", () => {
 
     expect(pollCalendly).toHaveBeenCalledTimes(1);
     expect(pollTranscripts).toHaveBeenCalledTimes(1);
+    expect(sendPreCallReminders).toHaveBeenCalledTimes(1);
     expect(postInboxDigest).not.toHaveBeenCalled();
     // cron tick marker is still stamped.
     expect(recordRun).toHaveBeenCalledWith(ENV, "cron");
@@ -103,6 +109,7 @@ describe("scheduled() — cron dispatch", () => {
     expect(postInboxDigest).toHaveBeenCalledTimes(1);
     expect(pollCalendly).not.toHaveBeenCalled();
     expect(pollTranscripts).not.toHaveBeenCalled();
+    expect(sendPreCallReminders).not.toHaveBeenCalled();
     expect(recordRun).toHaveBeenCalledWith(ENV, "cron");
   });
 

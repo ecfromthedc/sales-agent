@@ -56,6 +56,10 @@ for n in ns:
     print(n['id']); break
 " || true)
 fi
+if [[ -z "$KV_ID" ]]; then
+  echo "ERROR: could not create or find KV namespace rt_sales_state — aborting before toml patch" >&2
+  exit 1
+fi
 echo "KV namespace id: $KV_ID"
 
 echo
@@ -125,7 +129,8 @@ push_secret() {
 
 for k in ANTHROPIC_API_KEY NOTION_API_KEY SPOTIFY_CLIENT_ID SPOTIFY_CLIENT_SECRET \
          GMAIL_OAUTH_CLIENT_ID GMAIL_OAUTH_CLIENT_SECRET GMAIL_OAUTH_REFRESH_TOKEN \
-         CALENDLY_PERSONAL_ACCESS_TOKEN TIDES_TRACKER_API_KEY; do
+         CALENDLY_PERSONAL_ACCESS_TOKEN TIDES_TRACKER_API_KEY \
+         GEMINI_API_KEY CHARTMETRIC_REFRESH_TOKEN RAPIDAPI_KEY; do
   push_secret "$k"
 done
 # Placeholder for the Calendly webhook signing key — populated after subscription.

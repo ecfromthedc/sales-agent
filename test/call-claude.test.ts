@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { callClaude, extractText } from "../src/lib/anthropic";
+import { callClaude, extractText, researchWithWebSearch, composeBrief } from "../src/lib/anthropic";
 import type { MessagesResponse } from "../src/lib/anthropic";
 import type { Env } from "../src/lib/env";
 
@@ -44,7 +44,7 @@ describe("callClaude", () => {
     mockFetch(() => jsonResponse(OK_BODY));
 
     const res = await callClaude(env, {
-      model: "claude-sonnet-4-5-20250929",
+      model: "claude-sonnet-4-6",
       maxTokens: 1024,
       messages: [{ role: "user", content: "hi" }],
     });
@@ -58,7 +58,7 @@ describe("callClaude", () => {
     const spy = mockFetch(() => jsonResponse(OK_BODY));
 
     await callClaude(env, {
-      model: "claude-sonnet-4-5-20250929",
+      model: "claude-sonnet-4-6",
       maxTokens: 1024,
       messages: [{ role: "user", content: "hi" }],
     });
@@ -77,7 +77,7 @@ describe("callClaude", () => {
     const spy = mockFetch(() => jsonResponse(OK_BODY));
 
     await callClaude(env, {
-      model: "claude-opus-4-5-20250929",
+      model: "claude-opus-4-8",
       maxTokens: 8192,
       system: "you are a test",
       messages: [
@@ -89,7 +89,7 @@ describe("callClaude", () => {
     const [, init] = spy.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
     expect(body).toMatchObject({
-      model: "claude-opus-4-5-20250929",
+      model: "claude-opus-4-8",
       max_tokens: 8192,
       system: "you are a test",
       messages: [
@@ -105,22 +105,22 @@ describe("callClaude", () => {
     const spy = mockFetch(() => jsonResponse(OK_BODY));
 
     await callClaude(env, {
-      model: "claude-opus-4-5-20250929",
+      model: "claude-opus-4-8",
       maxTokens: 8192,
-      thinking: { type: "enabled", budget_tokens: 8000 },
+      thinking: { type: "adaptive" },
       messages: [{ role: "user", content: "hi" }],
     });
 
     const [, init] = spy.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
-    expect(body.thinking).toEqual({ type: "enabled", budget_tokens: 8000 });
+    expect(body.thinking).toEqual({ type: "adaptive" });
   });
 
   it("omits optional fields when not provided", async () => {
     const spy = mockFetch(() => jsonResponse(OK_BODY));
 
     await callClaude(env, {
-      model: "claude-sonnet-4-5-20250929",
+      model: "claude-sonnet-4-6",
       maxTokens: 1024,
       messages: [{ role: "user", content: "hi" }],
     });
@@ -136,11 +136,185 @@ describe("callClaude", () => {
 
     await expect(
       callClaude(env, {
-        model: "claude-sonnet-4-5-20250929",
+        model: "claude-sonnet-4-6",
         maxTokens: 1024,
         messages: [{ role: "user", content: "hi" }],
       }),
     ).rejects.toThrow(/anthropic_429: rate limited/);
+  });
+});
+
+// 2026-07-06: LLM_PROVIDER="gemini" routes composition through the adapter in
+// lib/gemini.ts and web research through Google Search grounding (Anthropic
+// account billing outage; a brief DeepSeek path was removed same-day). These
+// lock the switch: URL + key selection, tier mapping (brief→flash,
+// opus→pro), request/response translation, and research grounding.
+describe("callClaude — LLM_PROVIDER=gemini", () => {
+  const gEnv = {
+    ANTHROPIC_API_KEY: "sk-ant-unused",
+    GEMINI_API_KEY: "AIza-test",
+    LLM_PROVIDER: "gemini",
+  } as unknown as Env;
+
+  const GEMINI_OK = {
+    responseId: "resp-1",
+    candidates: [
+      {
+        content: { parts: [{ text: "hello from gemini" }] },
+        finishReason: "STOP",
+      },
+    ],
+    usageMetadata: { promptTokenCount: 12, candidatesTokenCount: 7 },
+  };
+
+  it("translates the request and maps opus-tier work to gemini-2.5-pro", async () => {
+    const spy = mockFetch(() => jsonResponse(GEMINI_OK));
+
+    const res = await callClaude(gEnv, {
+      model: "claude-opus-4-8",
+      maxTokens: 16000,
+      system: "you are a test",
+      thinking: { type: "adaptive" }, // dropped — Gemini manages its own reasoning
+      messages: [
+        { role: "user", content: "first" },
+        { role: "assistant", content: "second" },
+      ],
+    });
+
+    const [url, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("generativelanguage.googleapis.com");
+    expect(url).toContain("gemini-2.5-pro:generateContent");
+    expect((init.headers as Record<string, string>)["x-goog-api-key"]).toBe("AIza-test");
+    const body = JSON.parse(init.body as string);
+    expect(body.systemInstruction.parts[0].text).toBe("you are a test");
+    expect(body.generationConfig.maxOutputTokens).toBe(16000);
+    // Anthropic roles map to Gemini roles; assistant → model.
+    expect(body.contents).toEqual([
+      { role: "user", parts: [{ text: "first" }] },
+      { role: "model", parts: [{ text: "second" }] },
+    ]);
+    expect("thinking" in body).toBe(false);
+
+    // Response is mapped back to the MessagesResponse shape.
+    expect(res.content[0]).toEqual({ type: "text", text: "hello from gemini" });
+    expect(res.stop_reason).toBe("end_turn");
+    expect(res.usage).toEqual({ input_tokens: 12, output_tokens: 7 });
+  });
+
+  it("maps brief-tier work to gemini-2.5-flash and MAX_TOKENS to max_tokens", async () => {
+    const spy = mockFetch(() =>
+      jsonResponse({
+        candidates: [{ content: { parts: [{ text: "" }] }, finishReason: "MAX_TOKENS" }],
+      }),
+    );
+
+    const res = await callClaude(gEnv, {
+      model: "claude-sonnet-4-6",
+      maxTokens: 8192,
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    const [url] = spy.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("gemini-2.5-flash:generateContent");
+    expect(res.stop_reason).toBe("max_tokens");
+  });
+
+  it("throws when LLM_PROVIDER=gemini but GEMINI_API_KEY is unset, no network", async () => {
+    const spy = mockFetch(() => jsonResponse(GEMINI_OK));
+
+    await expect(
+      callClaude({ ANTHROPIC_API_KEY: "sk", LLM_PROVIDER: "gemini" } as unknown as Env, {
+        model: "claude-sonnet-4-6",
+        maxTokens: 100,
+        messages: [{ role: "user", content: "hi" }],
+      }),
+    ).rejects.toThrow(/llm_provider_gemini_missing_key/);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("an unset LLM_PROVIDER still routes to Anthropic with the Anthropic key", async () => {
+    const spy = mockFetch(() => jsonResponse(OK_BODY));
+
+    await callClaude(env, {
+      model: "claude-sonnet-4-6",
+      maxTokens: 100,
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    const [url, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.anthropic.com/v1/messages");
+    expect((init.headers as Record<string, string>)["x-api-key"]).toBe("sk-test-key");
+  });
+
+  it("researchWithWebSearch routes to Gemini google_search grounding with deduped citations", async () => {
+    const spy = mockFetch(() =>
+      jsonResponse({
+        candidates: [
+          {
+            content: { parts: [{ text: "Grounded research about X." }] },
+            groundingMetadata: {
+              groundingChunks: [
+                { web: { uri: "https://a.example/1", title: "a.example" } },
+                { web: { uri: "https://a.example/1", title: "a.example" } }, // dup → dedup
+                { web: { uri: "https://b.example/2", title: "b.example" } },
+              ],
+            },
+          },
+        ],
+      }),
+    );
+
+    const result = await researchWithWebSearch(gEnv, {
+      prompt: "who is X",
+      system: "research system",
+    });
+
+    const [url, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("gemini-2.5-flash:generateContent");
+    const body = JSON.parse(init.body as string);
+    expect(body.tools).toEqual([{ google_search: {} }]);
+    expect(body.systemInstruction.parts[0].text).toBe("research system");
+
+    expect(result.text).toBe("Grounded research about X.");
+    expect(result.citations).toEqual([
+      { url: "https://a.example/1", title: "a.example" },
+      { url: "https://b.example/2", title: "b.example" },
+    ]);
+  });
+
+  it("Gemini research throws on non-2xx with a tagged error", async () => {
+    mockFetch(() => new Response("quota exceeded", { status: 429 }));
+
+    await expect(
+      researchWithWebSearch(gEnv, { prompt: "x", system: "s" }),
+    ).rejects.toThrow(/gemini_429: quota exceeded/);
+  });
+
+  it("composeBrief throws when the model returns no text instead of shipping an empty brief", async () => {
+    // Regression: a thinking-by-default model burned the whole output cap on
+    // reasoning, the run "succeeded" with briefLen 0, upserted a blank deal,
+    // and Slack rejected the empty section block (invalid_blocks). Empty
+    // compose = hard failure.
+    mockFetch(() =>
+      jsonResponse({
+        candidates: [{ content: { parts: [{ text: "" }] }, finishReason: "MAX_TOKENS" }],
+      }),
+    );
+
+    await expect(
+      composeBrief(
+        {
+          invitee: {
+            inviteeEmail: "a@b.c",
+            inviteeName: "A",
+            eventStartsAt: "2026-07-07T00:00:00Z",
+            questionsAndAnswers: [],
+          },
+          enrichment: {},
+        },
+        gEnv,
+      ),
+    ).rejects.toThrow(/compose_brief_empty/);
   });
 });
 

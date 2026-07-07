@@ -1,20 +1,27 @@
 /**
- * Chartmetric enrichment.
- *
- * Adds the cross-platform popularity signal that Spotify/Songstats don't give:
- *   - cm_artist_score  (0–100 composite "how hot is this artist right now")
- *   - cm_artist_rank   (global artist rank)
+ * Chartmetric enrichment — the PRIMARY numbers source for the dossier
+ * (replaced Songstats 2026-07-06 per Eric; RT pays for unrestricted
+ * Chartmetric API access):
+ *   - cm_artist_score / cm_artist_rank  (composite popularity + global rank)
  *   - genres + country
+ *   - Spotify listeners / followers / popularity (cm_statistics)
+ *   - playlist counts (total / editorial) + playlist reach
+ *   - socials: Instagram / TikTok / YouTube
+ *   - platform links (/urls) + related artists (/relatedartists — feeds the
+ *     CRM comparable-client lookup)
+ *   - topTracks (top 5 by Spotify popularity) + latestTracks (last 3 releases)
  *
  * Auth: a long-lived refresh token (CHARTMETRIC_REFRESH_TOKEN secret) is
  * exchanged for a 1-hour access token. That access token is cached in KV so we
  * authenticate at most once per ~55 min instead of on every lookup.
  *
- * COST DISCIPLINE — Chartmetric's rate limit is ~25 requests per window, so:
+ * Guardrails (the per-window rate limit still exists even on the paid tier):
  *   - access token cached in KV (1 auth / 55 min)
  *   - full enrichment result cached per artist for 24h
- *   - max 2 API calls per cache-miss (id mapping + artist object)
- *   - event-driven only (pre-call brief on booking, never on the cron tick)
+ *   - max 5 API calls per cache-miss (ids + artist + tracks + urls + related)
+ *   - the tracks endpoint has no server-side sort, so we pull one page and rank
+ *     locally — top-5-by-popularity and latest-3-by-release-date in one call
+ *   - event-driven only (brief on booking, T-30 reminder refetch)
  *   - a 429 returns null immediately — never retry-loops into the limit
  */
 
@@ -25,11 +32,20 @@ const TOKEN_CACHE_KEY = "chartmetric:token";
 const TOKEN_TTL = 3300; // 55 min — access token lives 3600s, refresh early
 const RESULT_TTL = 86400; // 24h
 
+// One page of the unsorted tracks endpoint. The endpoint has no server-side
+// sort, so we fetch this many and rank locally. For RT's actual prospects
+// (emerging / mid-tier artists) this is the entire catalog; only major-label
+// acts with deep back-catalogs (e.g. 200+ tracks) get truncated, and the true
+// hits still surface inside the first page.
+const TRACK_FETCH_LIMIT = 100;
+const TOP_TRACKS = 5;
+const LATEST_TRACKS = 3;
+
 // Hard runaway ceiling: a circuit breaker independent of the per-artist cache.
-// Even if something loops, we never make more than this many Chartmetric calls
-// per UTC day. Bookings are low-volume + cached, so a real day is single digits;
-// this only ever trips on a bug. Bump DAILY_CALL_CEILING if volume ever grows.
-const DAILY_CALL_CEILING = 200;
+// RT pays for unrestricted API access, so this is NOT a cost guard — it exists
+// purely so a bug (a poller loop, a retry storm) can't hammer Chartmetric
+// forever. Bookings are low-volume + cached; a real day is double digits max.
+const DAILY_CALL_CEILING = 1000;
 
 async function withinDailyBudget(env: Env): Promise<boolean> {
   const day = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
@@ -39,9 +55,17 @@ async function withinDailyBudget(env: Env): Promise<boolean> {
     console.warn("chartmetric_daily_ceiling_hit", { day, used, ceiling: DAILY_CALL_CEILING });
     return false;
   }
-  // +2 reflects the max calls a single cache-miss makes (id mapping + artist obj).
-  await env.STATE.put(key, String(used + 2), { expirationTtl: 172800 }).catch(() => {});
+  // +5 reflects the max calls a single cache-miss makes (id mapping + artist
+  // obj + tracks page + urls + related artists).
+  await env.STATE.put(key, String(used + 5), { expirationTtl: 172800 }).catch(() => {});
   return true;
+}
+
+/** A single track with the popularity read the dossier surfaces. */
+export interface ChartmetricTrack {
+  name: string;
+  spotifyPopularity: number | null; // Spotify popularity 0–100
+  releaseDate: string | null; // ISO date (YYYY-MM-DD)
 }
 
 export interface ChartmetricEnrichment {
@@ -52,9 +76,94 @@ export interface ChartmetricEnrichment {
   genrePrimary: string | null;
   genresSecondary: string[];
   country: string | null;
-  spotifyMonthlyListeners: number | null; // only populated on the name-search path
+  spotifyMonthlyListeners: number | null;
   spotifyFollowers: number | null;
+  spotifyPopularity: number | null; // artist-level Spotify popularity 0–100
+  // Spotify playlist footprint (all from cm_statistics).
+  totalPlaylists: number | null; // num_sp_playlists
+  editorialPlaylists: number | null; // num_sp_editorial_playlists
+  playlistReach: number | null; // sp_playlist_total_reach
+  // Socials.
+  instagramFollowers: number | null;
+  tiktokFollowers: number | null;
+  youtubeSubscribers: number | null;
+  /** Platform profile links from /artist/:id/urls (spotify, instagram, …). */
+  links: Array<{ domain: string; url: string }>;
+  /** Similar-artist names from /artist/:id/relatedartists — feeds CRM comparables. */
+  relatedArtists: string[];
   chartmetricUrl: string | null;
+  topTracks: ChartmetricTrack[]; // up to 5, highest Spotify popularity first
+  latestTracks: ChartmetricTrack[]; // up to 3, most recent release first
+}
+
+// Domains worth surfacing in the dossier's LINKS section, in display order.
+const LINK_DOMAINS = ["spotify", "instagram", "tiktok", "youtube", "soundcloud", "website"];
+
+/** Map /artist/:id/urls rows → deduped {domain, url} in LINK_DOMAINS order. */
+function toLinks(rows: any[]): Array<{ domain: string; url: string }> {
+  const byDomain = new Map<string, string>();
+  for (const r of rows) {
+    const domain = typeof r?.domain === "string" ? r.domain : null;
+    const url = Array.isArray(r?.url) ? r.url[0] : r?.url;
+    if (domain && typeof url === "string" && !byDomain.has(domain)) {
+      byDomain.set(domain, url);
+    }
+  }
+  return LINK_DOMAINS.filter((d) => byDomain.has(d)).map((domain) => ({
+    domain,
+    url: byDomain.get(domain)!,
+  }));
+}
+
+/** Spotify popularity (0–100) lives top-level or nested under cm_statistics. */
+function trackPopularity(t: any): number | null {
+  const p = t?.sp_popularity ?? t?.cm_statistics?.sp_popularity;
+  return typeof p === "number" ? p : null;
+}
+
+/** A track's own release date is the first entry of its release_dates array. */
+function trackReleaseDate(t: any): string | null {
+  const r = Array.isArray(t?.release_dates) ? t.release_dates[0] : null;
+  return typeof r === "string" ? r.slice(0, 10) : null;
+}
+
+function toTrack(t: any): ChartmetricTrack {
+  return {
+    name: typeof t?.name === "string" ? t.name : "Untitled",
+    spotifyPopularity: trackPopularity(t),
+    releaseDate: trackReleaseDate(t),
+  };
+}
+
+/**
+ * Fetch one page of the artist's tracks and rank locally (the endpoint exposes
+ * no server-side sort). Returns top-5-by-popularity and latest-3-by-release.
+ * Best-effort: any failure yields empty arrays so the brief still composes.
+ */
+async function fetchArtistTracks(
+  cmId: number,
+  token: string,
+): Promise<{ topTracks: ChartmetricTrack[]; latestTracks: ChartmetricTrack[] }> {
+  const data = await cmFetch(`/artist/${cmId}/tracks?limit=${TRACK_FETCH_LIMIT}`, token);
+  const rows: any[] = Array.isArray(data?.obj) ? data.obj : [];
+  if (!rows.length) return { topTracks: [], latestTracks: [] };
+
+  const topTracks = rows
+    .filter((t) => trackPopularity(t) !== null)
+    .sort((a, b) => trackPopularity(b)! - trackPopularity(a)!)
+    .slice(0, TOP_TRACKS)
+    .map(toTrack);
+
+  // Latest releases: prefer rows where the prospect is the main artist (cuts
+  // "featured on someone else's remix" noise); fall back to all dated rows.
+  const dated = rows.filter((t) => trackReleaseDate(t));
+  const mains = dated.filter((t) => t?.artist_type === "main");
+  const latestTracks = (mains.length ? mains : dated)
+    .sort((a, b) => trackReleaseDate(b)!.localeCompare(trackReleaseDate(a)!))
+    .slice(0, LATEST_TRACKS)
+    .map(toTrack);
+
+  return { topTracks, latestTracks };
 }
 
 /**
@@ -92,18 +201,26 @@ async function getAccessToken(env: Env): Promise<string | null> {
 }
 
 async function cmFetch(path: string, token: string): Promise<any | null> {
-  const res = await fetch(`${CHARTMETRIC_BASE}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (res.status === 429) {
-    console.warn("chartmetric_rate_limited", { path });
-    return null; // bail — do not retry into the limit
+  // Chartmetric's burst limit trips when the 5 enrichment calls fire
+  // back-to-back (the 429 body literally says "retry in ~150ms"). On the paid
+  // tier a short backoff-retry is safe and keeps one throttled call from
+  // poisoning the enrichment with nulls.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(`${CHARTMETRIC_BASE}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 429) {
+      console.warn("chartmetric_rate_limited", { path, attempt });
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      continue;
+    }
+    if (!res.ok) {
+      console.warn("chartmetric_fetch_failed", { path, status: res.status });
+      return null;
+    }
+    return (await res.json()) as any;
   }
-  if (!res.ok) {
-    console.warn("chartmetric_fetch_failed", { path, status: res.status });
-    return null;
-  }
-  return (await res.json()) as any;
+  return null; // still throttled after retries — give up on this call only
 }
 
 /**
@@ -120,7 +237,9 @@ export async function enrichFromChartmetric(
   const { spotifyArtistId, artistName } = params;
   if (!spotifyArtistId && !artistName) return null;
 
-  const cacheKey = `chartmetric:${spotifyArtistId ?? `name:${artistName}`}`;
+  // v2: cache shape gained socials/playlists/links/related (2026-07-06) — the
+  // version bump keeps stale v1 entries from serving a shape missing fields.
+  const cacheKey = `chartmetric:v2:${spotifyArtistId ?? `name:${artistName}`}`;
   const cached = (await env.STATE.get(cacheKey, "json")) as ChartmetricEnrichment | null;
   if (cached) {
     console.log("chartmetric_cache_hit", { cacheKey });
@@ -162,9 +281,23 @@ export async function enrichFromChartmetric(
     return null;
   }
 
-  // Full artist object (call #2) — the authoritative score, rank, and genres.
+  // Full artist object (call #2) — score, rank, genres, and cm_statistics
+  // (listeners, followers, popularity, playlist footprint, socials).
   const artist = await cmFetch(`/artist/${cmId}`, token);
   const obj = artist?.obj ?? {};
+  const stats = obj.cm_statistics ?? {};
+
+  // Tracks page (call #3) — top songs + latest releases, ranked locally.
+  const { topTracks, latestTracks } = await fetchArtistTracks(cmId, token);
+
+  // Platform links (call #4) + related artists (call #5) — both best-effort.
+  const urls = await cmFetch(`/artist/${cmId}/urls`, token);
+  const links = toLinks(Array.isArray(urls?.obj) ? urls.obj : []);
+  const related = await cmFetch(`/artist/${cmId}/relatedartists?limit=5`, token);
+  const relatedArtists: string[] = (Array.isArray(related?.obj) ? related.obj : [])
+    .map((a: any) => a?.name)
+    .filter((n: any) => typeof n === "string")
+    .slice(0, 5);
 
   const result: ChartmetricEnrichment = {
     name: obj.name ?? artistName ?? "Unknown",
@@ -174,13 +307,38 @@ export async function enrichFromChartmetric(
     genrePrimary: obj.genres?.primary?.name ?? null,
     genresSecondary: (obj.genres?.secondary ?? []).map((g: any) => g.name).filter(Boolean).slice(0, 5),
     country: obj.code2 ?? null,
-    spotifyMonthlyListeners: obj.sp_monthly_listeners ?? searchListeners,
-    spotifyFollowers: obj.sp_followers ?? searchFollowers,
+    spotifyMonthlyListeners: stats.sp_monthly_listeners ?? obj.sp_monthly_listeners ?? searchListeners,
+    spotifyFollowers: stats.sp_followers ?? obj.sp_followers ?? searchFollowers,
+    spotifyPopularity: stats.sp_popularity ?? null,
+    totalPlaylists: stats.num_sp_playlists ?? null,
+    editorialPlaylists: stats.num_sp_editorial_playlists ?? null,
+    playlistReach: stats.sp_playlist_total_reach ?? null,
+    instagramFollowers: stats.ins_followers ?? null,
+    tiktokFollowers: stats.tiktok_followers ?? null,
+    youtubeSubscribers: stats.ycs_subscribers ?? null,
+    links,
+    relatedArtists,
     chartmetricUrl: `https://app.chartmetric.com/artist/${cmId}`,
+    topTracks,
+    latestTracks,
   };
 
-  await env.STATE.put(cacheKey, JSON.stringify(result), { expirationTtl: RESULT_TTL }).catch(() => {});
-  console.log("chartmetric_cached", { cmId, cmScore: result.cmScore, cmRank: result.cmRank });
+  // Only cache complete-ish results: if the artist object itself failed (rate
+  // limit / outage), score + stats are all null — caching that would serve a
+  // gutted dossier for 24h. Return it best-effort, refetch next time.
+  if (obj.name) {
+    await env.STATE.put(cacheKey, JSON.stringify(result), { expirationTtl: RESULT_TTL }).catch(() => {});
+  } else {
+    console.warn("chartmetric_partial_not_cached", { cmId });
+  }
+  console.log("chartmetric_cached", {
+    cmId,
+    cmScore: result.cmScore,
+    cmRank: result.cmRank,
+    links: result.links.length,
+    topTracks: result.topTracks.length,
+    latestTracks: result.latestTracks.length,
+  });
 
   return result;
 }

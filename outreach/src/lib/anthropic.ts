@@ -9,7 +9,7 @@ import { callClaude } from '../../../src/lib/anthropic';
 import type { Env } from './env';
 import type { Artist, Label, LeadScore, OutreachDraft, OutreachSignal } from './types';
 
-const SONNET = 'claude-sonnet-4-5-20250929';
+const SONNET = 'claude-sonnet-4-6';
 
 async function callAnthropic(
   env: Env,

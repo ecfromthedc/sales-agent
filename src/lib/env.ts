@@ -19,8 +19,9 @@ export interface Env {
   TIDES_TRACKER_API_KEY: string;
   TIDES_TRACKER_BASE_URL?: string;       // optional; deprecated Tides Tracker host (crm-lookup is canonical)
   TEST_AUTH_KEY: string;
-  RAPIDAPI_KEY: string;
   CHARTMETRIC_REFRESH_TOKEN?: string;    // optional; long-lived, exchanged for 1h access tokens (no-ops if unset)
+  RAPIDAPI_KEY?: string;                 // optional; Songstats gap-filler (total streams, socials CM lacks) — no-ops if unset
+  GEMINI_API_KEY?: string;               // optional; required when LLM_PROVIDER = "gemini" (composition + grounded web research)
   FIREFLIES_API_KEY?: string;            // optional; fetches transcripts from Fireflies (no-ops if unset)
   FIREFLIES_WEBHOOK_SECRET?: string;     // optional; verifies Fireflies webhook signatures (skips verify if unset)
   SLACK_SIGNING_SECRET?: string;         // optional; verifies Slack Events API requests (rejects if unset)
@@ -32,9 +33,11 @@ export interface Env {
   MEET_RECORDINGS_FOLDER_ID: string;
   SLACK_BOT_TOKEN: string;
   SLACK_BRIEF_CHANNEL_ID: string;
+  SLACK_BRIEF_CHANNEL_ID_SEENO?: string; // optional; splits Seeno's briefs to their own channel (defaults to SLACK_BRIEF_CHANNEL_ID)
   SLACK_PROPOSALS_CHANNEL_ID?: string;   // optional; post-call pitch notices (no-ops if unset)
   SLACK_EMAIL_DIGEST_CHANNEL_ID?: string; // optional; inbox triage digest notices (no-ops if unset)
   PUBLIC_BASE_URL?: string;              // optional; e.g. https://rt-sales-call-agent.<sub>.workers.dev — for proposal live links
+  LLM_PROVIDER?: string;                 // optional; "gemini" routes composition + web research to Gemini. Unset ⇒ Anthropic.
 
   // Bindings
   PITCH_PDFS: R2Bucket;
@@ -43,5 +46,4 @@ export interface Env {
   // Optional at the type level so dev/test environments without the binding still
   // type-check; integrations/pdf.ts falls back to a pending key when it's absent.
   BROWSER?: BrowserWorker;
-  // AGENT_RUN: DurableObjectNamespace;
 }

@@ -129,11 +129,13 @@ export async function searchGmailHistory(
   const domain = inviteeEmail.split("@")[1] ?? "";
 
   // Two passes: exact email, then domain (catches manager <-> artist mismatches).
-  const exact = await listThreads(`from:${inviteeEmail} OR to:${inviteeEmail}`, token, 10);
-  const domainQuery = domain ? `(from:@${domain} OR to:@${domain})` : null;
-  const domainHits = domainQuery
-    ? await listThreads(domainQuery, token, 10)
-    : { resultSizeEstimate: 0, threads: [] };
+  // Independent queries — run in parallel.
+  const [exact, domainHits] = await Promise.all([
+    listThreads(`from:${inviteeEmail} OR to:${inviteeEmail}`, token, 10),
+    domain
+      ? listThreads(`(from:@${domain} OR to:@${domain})`, token, 10)
+      : Promise.resolve({ resultSizeEstimate: 0, threads: [] as Array<{ id: string }> }),
+  ]);
 
   const enriched = await Promise.all(
     exact.threads.slice(0, 5).map((t) => getThread(t.id, token)),

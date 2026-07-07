@@ -1,8 +1,9 @@
 /**
  * Calendly webhook handler.
  *
- * Subscribes to `invitee.created` events on:
- *   https://calendly.com/ec-risingtidesent/rising-tides-strategy-session
+ * Subscribes to `invitee.created` events across Rising Tides hosts (Eric,
+ * Seeno, …). The booking's event-type URI routes it to the right host via
+ * CALENDLY_SOURCES, which decides the target Slack channel.
  *
  * On booking, kicks off the pre-call brief agent (async via ctx.waitUntil so we
  * respond to Calendly fast and do the slow work in the background).
@@ -11,6 +12,7 @@
 import type { Env } from "../../../lib/env";
 import { verifyCalendlySignature } from "../integrations/calendly";
 import { runPreCallBrief } from "../agents/pre-call-brief";
+import { sourceForEventType } from "../config/calendly-sources";
 
 export async function handleCalendlyWebhook(
   req: Request,
@@ -35,6 +37,11 @@ export async function handleCalendlyWebhook(
     return new Response(JSON.stringify({ ok: true, ignored: payload.event }), { status: 200 });
   }
 
+  // Route by event-type URI → host → Slack channel. Unknown event types fall
+  // back to the default host (Eric) so a new link never silently drops.
+  const eventTypeUri = payload.payload.scheduled_event.event_type ?? null;
+  const source = sourceForEventType(eventTypeUri);
+
   // Kick off pre-call brief in the background; respond immediately to Calendly.
   ctx.waitUntil(
     runPreCallBrief({
@@ -43,10 +50,15 @@ export async function handleCalendlyWebhook(
       eventStartsAt: payload.payload.scheduled_event.start_time,
       eventUri: payload.payload.scheduled_event.uri,
       questionsAndAnswers: payload.payload.questions_and_answers ?? [],
+      slackChannelId: source.briefChannelId(env),
+      hostSlackUserId: source.hostSlackUserId,
     }, env),
   );
 
-  return new Response(JSON.stringify({ ok: true, queued: "pre-call-brief" }), { status: 200 });
+  return new Response(
+    JSON.stringify({ ok: true, queued: "pre-call-brief", host: source.label }),
+    { status: 200 },
+  );
 }
 
 interface CalendlyWebhookPayload {
@@ -58,6 +70,7 @@ interface CalendlyWebhookPayload {
       uri: string;
       start_time: string;
       end_time: string;
+      event_type?: string; // event-type URI — routes the booking to its host
     };
     questions_and_answers?: Array<{ question: string; answer: string }>;
   };

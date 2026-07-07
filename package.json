@@ -12,9 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.30.0",
-    "@cloudflare/puppeteer": "^1.1.0",
-    "@notionhq/client": "^2.2.15"
+    "@cloudflare/puppeteer": "^1.1.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240614.0",
