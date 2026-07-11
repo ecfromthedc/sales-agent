@@ -71,6 +71,32 @@ npx wrangler dev          # local dev
 npx wrangler deploy       # to Cloudflare
 ```
 
+## Security notes
+
+- **Proposal links are unguessable capability URLs (no expiry).** The public
+  client-facing viewer serves the rendered proposal at `GET /p/:dealId`
+  (`src/roles/sales/triggers/proposal-public.ts`). It is intentionally
+  unauthenticated: the `dealId` is an opaque Notion page UUID, so knowing the
+  full URL is what grants access — the link itself acts as a capability token.
+  The id is path-guarded (`isValidDealId` in `src/lib/proposal-security.ts`) so a
+  crafted value can never escape the `proposals/<id>/latest.html` R2 key prefix,
+  and responses send `Cache-Control: no-store` + `X-Robots-Tag: noindex,
+  nofollow`. There is **no TTL or revocation** today, so a link that leaks (e.g.
+  forwarded email, shared screenshot) stays live indefinitely. Recommended
+  follow-up: add a signed-token TTL and/or a per-deal revocation flag so links
+  can be expired or killed. Tracked as a low-priority hardening item — treat any
+  proposal link as sensitive until then.
+
+- **`wrangler.toml` holds infra identifiers, not secrets.** The committed
+  `[vars]` block (Cloudflare `account_id`, the `STATE` KV namespace id, the R2
+  bucket name, and the `NOTION_*_DB_ID` values) are non-secret resource
+  identifiers, safe to keep in version control. They name resources but do not
+  grant access on their own. All actual secrets — `NOTION_API_KEY`,
+  `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, the Calendly / Spotify / Gmail
+  credentials, `FIREFLIES_WEBHOOK_SECRET`, etc. — are injected via
+  `wrangler secret put` and are never committed (see the "Required secrets"
+  comment in `wrangler.toml` and `.dev.vars.example`).
+
 ## Status
 
 Scaffold in place (2026-05-14). Notion schema + Calendly webhook are the next two builds.
