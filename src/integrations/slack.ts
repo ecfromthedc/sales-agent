@@ -250,8 +250,13 @@ export function briefToSlackMrkdwn(brief: string): string {
 export interface BriefMessageInput {
   inviteeName: string;
   inviteeEmail: string;
+  inviteePhone?: string;
   /** Already-formatted meeting time string (caller controls timezone). */
   meetingTime: string;
+  /** Artist profile captured directly from Calendly. */
+  spotifyLink?: string | null;
+  /** Booked host to notify immediately, not only in the T-30 reminder. */
+  hostSlackUserId?: string;
   brief: string;
   pageId: string;
 }
@@ -261,13 +266,32 @@ export interface BriefMessageInput {
  * inline call posted (header + brief section + Notion/email context).
  */
 export function buildBriefMessage(input: BriefMessageInput): SlackMessage {
-  const headline = `📋 ${input.inviteeName} — ${input.meetingTime}`;
+  const headline = `📋 New booking — ${input.inviteeName}`;
+  const owner = input.hostSlackUserId ? `<@${input.hostSlackUserId}> ` : "";
+  const contactLines = [
+    `<mailto:${input.inviteeEmail}|${input.inviteeEmail}>`,
+    input.inviteePhone?.trim(),
+  ].filter(Boolean).join("\n");
+  const fields: SlackBlock[] = [
+    { type: "mrkdwn", text: `*When*\n${input.meetingTime}` },
+    { type: "mrkdwn", text: `*Contact*\n${contactLines}` },
+  ];
+  if (input.spotifyLink) {
+    fields.push({ type: "mrkdwn", text: `*Spotify*\n<${input.spotifyLink}|Open artist profile>` });
+  }
+  if (input.hostSlackUserId) {
+    fields.push({ type: "mrkdwn", text: `*Owner*\n<@${input.hostSlackUserId}>` });
+  }
   return {
-    text: `📋 *${input.inviteeName}* — ${input.meetingTime}`,
+    text: `${owner}📋 New Calendly booking — *${input.inviteeName}* — ${input.meetingTime} — ${input.inviteeEmail}`,
     blocks: [
       {
         type: "header",
         text: { type: "plain_text", text: headline },
+      },
+      {
+        type: "section",
+        fields,
       },
       {
         type: "section",
@@ -278,7 +302,7 @@ export function buildBriefMessage(input: BriefMessageInput): SlackMessage {
         elements: [
           {
             type: "mrkdwn",
-            text: `<${notionUrl(input.pageId)}|Open in Notion> │ ${input.inviteeEmail}`,
+            text: `<${notionUrl(input.pageId)}|Open in Notion>`,
           },
         ],
       },

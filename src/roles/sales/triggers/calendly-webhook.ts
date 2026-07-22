@@ -47,6 +47,7 @@ export async function handleCalendlyWebhook(
     runPreCallBrief({
       inviteeEmail: payload.payload.email,
       inviteeName: payload.payload.name,
+      inviteePhone: payload.payload.text_reminder_number ?? undefined,
       eventStartsAt: payload.payload.scheduled_event.start_time,
       eventUri: payload.payload.scheduled_event.uri,
       questionsAndAnswers: payload.payload.questions_and_answers ?? [],
@@ -66,6 +67,7 @@ interface CalendlyWebhookPayload {
   payload: {
     email: string;
     name: string;
+    text_reminder_number?: string | null;
     scheduled_event: {
       uri: string;
       start_time: string;
