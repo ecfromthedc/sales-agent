@@ -36,6 +36,7 @@ const ENRICH_RETRY = { retries: 2, baseDelayMs: 300, maxDelayMs: 4000 } as const
 interface PreCallBriefInput {
   inviteeEmail: string;
   inviteeName: string;
+  inviteePhone?: string;
   eventStartsAt: string;
   eventUri: string;
   questionsAndAnswers: Array<{ question: string; answer: string }>;
@@ -214,7 +215,10 @@ export async function runPreCallBrief(input: PreCallBriefInput, env: Env): Promi
       buildBriefMessage({
         inviteeName: input.inviteeName,
         inviteeEmail: input.inviteeEmail,
+        inviteePhone: input.inviteePhone,
         meetingTime,
+        spotifyLink,
+        hostSlackUserId: input.hostSlackUserId,
         brief,
         pageId,
       }),

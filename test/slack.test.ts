@@ -145,31 +145,46 @@ describe("buildBriefMessage", () => {
   const input = {
     inviteeName: "Jane Artist",
     inviteeEmail: "jane@label.com",
+    inviteePhone: "+1 202 555 0142",
     meetingTime: "Mon, Jun 8, 3:00 PM",
+    spotifyLink: "https://open.spotify.com/artist/example",
+    hostSlackUserId: "U123",
     brief: "**Summary** of the call",
     pageId: "3611465b-b829-81de-a237-cf6516fe8fcf",
   };
 
-  it("uses a fallback text and a header/section/context block layout", () => {
+  it("mentions the host and makes contact details prominent", () => {
     const msg = buildBriefMessage(input);
-    expect(msg.text).toBe("📋 *Jane Artist* — Mon, Jun 8, 3:00 PM");
+    expect(msg.text).toContain("<@U123>");
+    expect(msg.text).toContain("jane@label.com");
     expect(msg.blocks?.[0]).toMatchObject({ type: "header" });
     expect(msg.blocks?.[1]).toMatchObject({ type: "section" });
-    expect(msg.blocks?.[2]).toMatchObject({ type: "context" });
+    expect(msg.blocks?.[2]).toMatchObject({ type: "section" });
+    expect(msg.blocks?.[3]).toMatchObject({ type: "context" });
   });
 
-  it("links a de-hyphenated Notion url and includes the invitee email", () => {
-    const ctx = buildBriefMessage(input).blocks?.[2] as {
+  it("links a de-hyphenated Notion url", () => {
+    const ctx = buildBriefMessage(input).blocks?.[3] as {
       elements: Array<{ text: string }>;
     };
     expect(ctx.elements[0].text).toContain(
       "https://www.notion.so/3611465bb82981dea237cf6516fe8fcf",
     );
-    expect(ctx.elements[0].text).toContain("jane@label.com");
+  });
+
+  it("shows email, phone, Spotify, and owner in the contact card", () => {
+    const contact = buildBriefMessage(input).blocks?.[1] as {
+      fields: Array<{ text: string }>;
+    };
+    const text = contact.fields.map((field) => field.text).join("\n");
+    expect(text).toContain("mailto:jane@label.com");
+    expect(text).toContain("+1 202 555 0142");
+    expect(text).toContain("https://open.spotify.com/artist/example");
+    expect(text).toContain("<@U123>");
   });
 
   it("renders the brief through the mrkdwn transform", () => {
-    const section = buildBriefMessage(input).blocks?.[1] as {
+    const section = buildBriefMessage(input).blocks?.[2] as {
       text: { text: string };
     };
     expect(section.text.text).toContain("*Summary*");

@@ -127,6 +127,7 @@ async function pollSource(
           {
             inviteeEmail: invitee.email,
             inviteeName: invitee.name,
+            inviteePhone: invitee.text_reminder_number ?? undefined,
             eventStartsAt: event.start_time,
             eventUri: event.uri,
             questionsAndAnswers: invitee.questions_and_answers ?? [],
@@ -191,6 +192,7 @@ interface CalendlyInviteeList {
     email: string;
     name: string;
     status: "active" | "canceled";
+    text_reminder_number?: string | null;
     questions_and_answers?: Array<{ question: string; answer: string; position: number }>;
   }>;
 }
